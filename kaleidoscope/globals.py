@@ -16,3 +16,7 @@ class Period(Enum):
     FIVE_WEEKS = 35
     SIX_WEEKS = 42
     SEVEN_WEEKS = 49
+    
+class OrderAction(Enum):
+    BUY = 1
+    SELL = -1

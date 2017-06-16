@@ -1,21 +1,21 @@
 """
 Module doc string
 """
+
 class Kaleidoscope(object):
 
-    def __init__(self):
+    def __init__(self, option_feed=None):
         """
         Constructor for kaleidoscope object to process
         options data.
         """
-        self.datafeed = None
+        self.option_feed = option_feed
         self.pattern = None
-
         print("hello from kaleidoscope!")
 
-    def add_datafeed(self, datafeed):
+    def add_option_feed(self, datafeed):
         """ Sets this instance to use provided datafeed object """
-        self.datafeed = datafeed
+        self.option_feed = datafeed
 
     def add_pattern(self, pattern, **kwargs):
         """
@@ -48,6 +48,29 @@ class Kaleidoscope(object):
         """
         self.pattern = pattern(**kwargs)
 
-    def run(self, pattern):
-        """ Runs the patter analyze method to start analysis """
-        self.pattern.analyze()
+    def run(self, mode='backtest'):
+        """
+        Here we split the full option chain imported from the datafeed
+        by the quote date and pass in the daily option chain data to the
+        pattern to be processed.
+
+        The Pattern will be responsible for constructing the option strategies
+        based on various parameters for all strikes of the option chain.
+
+        This method will then determine the trading result for each option spread
+        created in the Pattern.
+        """
+        # process each quote date and pass option chain to pattern
+        for quote_date in self.option_feed.date_stream:
+            option_chain = self.option_feed.get_option_chains(quote_date)
+            self.pattern.process_option_chain(quote_date, option_chain)
+
+        for basis in self.pattern.basis:
+            print(self.pattern.basis[basis][1])
+
+        if mode == 'backtest':
+            # perform backtest with option chains
+            pass
+        elif mode == 'stats':
+            # perform analysis on option chains and return stats
+            pass

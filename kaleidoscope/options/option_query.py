@@ -103,7 +103,7 @@ class OptionQuery(object):
         """
         Remove unnessesary columns, used for final output of fetch functions
         """
-        return self.option_chain.drop(['quote_date', 't_delta'], axis=1)
+        return self.option_chain.drop('t_delta', axis=1)
 
     def _closest(self, column, val):
         """
@@ -192,7 +192,27 @@ class OptionQuery(object):
 
         return offset
 
+# FETCH METHODS =================================================================================
 
+    def fetch(self):
+        """
+        Return all rows of this object's option chain
+        """
+        return self._strip()
+
+    def fetch_first(self):
+        """
+        Return the first row of this object's option chain. Will be the lowest
+        strike price of the chain
+        """
+        return self._strip().head(1)
+
+    def fetch_last(self):
+        """
+        Return the last row of this object's option chain. Will be the highest
+        strike price of the chain
+        """
+        return self._strip().tail(1)
 
 
 

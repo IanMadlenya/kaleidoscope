@@ -23,41 +23,22 @@ class BaseData(ABC):
     """
     def __init__(self):
 
-        self.continue_backtest = True
-        self.tickers = {}
-        self.tickers_data = {}
         self.option_chains = {}
-        self.bar_stream = None
-        self.events_queue = None
+        self.date_stream = None
 
-    def set_queue(self, queue):
-        """
-        Give this datafeed the instance of the events queue from backtest
-        """
-        self.events_queue = queue
 
-    def _merge_sort_ticker_data(self):
-        """
-        Concatenates all of the separate equities DataFrames
-        into a single DataFrame that is time ordered, allowing tick
-        data events to be added to the queue in a chronological fashion.
-
-        Note that this is an idealised situation, utilised solely for
-        backtesting. In live trading ticks may arrive "out of order".
-        """
-        dataframe = pd.concat(self.tickers_data.values()).sort_index()
-
-        # We will sort by index (Date), and the ticker
-        dataframe['colFromIndex'] = dataframe.index
-        dataframe = dataframe.sort_values(by=["colFromIndex", "Ticker"])
-        return dataframe.iterrows()
+    def subscribe_options(self, symbol):
+        """ load all option chains for this ticker if available """
+        self.load_option_chains(symbol)
+        self.date_stream = sorted(self.option_chains.keys())
 
     @abstractmethod
-    def stream_next(self):
+    def load_option_chains(self, symbol):
         """
-        Subclasses should implement this method
+        Override this method in subclasses to implement custom option data
+        load from different data sources
         """
-        raise NotImplementedError("Must override stream_next")
+        raise NotImplementedError("Must implement load_option_chains() method!")
 
 
 

@@ -15,9 +15,16 @@ class BasePattern(object):
 
     def init(self):
         """ Initialize any instance variables not set by user """
-        raise NotImplementedError("on_init method not implemented!")
+        raise NotImplementedError("init method not implemented!")
 
-    def process_option_chain(self, date, datas):
+    def main(self, date, datas):
         """ Apply this Pattern's filtering logic to the original option chain """
-        raise NotImplementedError("on_data method not implemented!")
-        
+        raise NotImplementedError("main method not implemented!")
+
+    def merge(self):
+        """
+        This method will merge all option chains stored in the basis into one
+        dataframe that contains all option chains for all dates. This is used
+        for plotting purposes
+        """
+        pass

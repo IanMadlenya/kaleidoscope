@@ -69,6 +69,10 @@ class OptionQuery(object):
         offset = self._offset(column, val, width, mode)
         return self.closest(column, offset)
 
+    def equals(self, column, val):
+        filtered_df = self.option_chain[self.option_chain[column] == val]
+        return OptionQuery(filtered_df)
+
 # GET METHODS ===================================================================================
 
     def get(self, column):

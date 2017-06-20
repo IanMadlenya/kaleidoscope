@@ -24,8 +24,9 @@ pip-log.txt
 # Unit test / coverage reports
 .coverage
 
-# vsCode meta files
-.vscode
+# IDE meta files
+.vscode
+.idea
 
 # project specific
 data/

@@ -4,7 +4,6 @@ module doc string
 
 from decimal import Decimal
 from abc import ABC, abstractmethod
-from kaleidoscope.event import BarEvent
 
 import pandas as pd
 pd.set_option('display.expand_frame_repr', False)

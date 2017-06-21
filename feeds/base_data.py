@@ -14,7 +14,7 @@ class BaseData(ABC):
     This class will take care of reading the lines and storing them in a pandas
     dataframe and merging multiple tickers if applicable.
 
-    Subclasses only need to implement load_data method.
+    Subclasses only need to implement load_option_chains method.
 
     SQLite is the only implemented database type at this time. conn_str
     should be the absolute path of the database file or the file path
@@ -25,14 +25,13 @@ class BaseData(ABC):
         self.option_chains = {}
         self.date_stream = None
 
-
-    def subscribe_options(self, symbol):
+    def subscribe_options(self, symbol, **kwargs):
         """ load all option chains for this ticker if available """
-        self.load_option_chains(symbol)
+        self.load_option_chains(symbol, **kwargs)
         self.date_stream = sorted(self.option_chains.keys())
 
     @abstractmethod
-    def load_option_chains(self, symbol):
+    def load_option_chains(self, symbol, **kwargs):
         """
         Override this method in subclasses to implement custom option data
         load from different data sources

@@ -1,12 +1,15 @@
 class BasePattern(object):
 
-    def __init__(self, **kwargs):
+    def __init__(self, datafeed, **kwargs):
         # Attach user defined strategy optimzation params into class
         for k in kwargs:
             setattr(self, k, kwargs[k])
 
+        # set reference to data feed to be accessed by Pattern
+        self.datafeed = datafeed
+
         # store the process option chain by dates
-        self.basis = {}
+        #self.basis = {}
         self.init()
 
     def plot(self):
@@ -17,14 +20,10 @@ class BasePattern(object):
         """ Initialize any instance variables not set by user """
         raise NotImplementedError("init method not implemented!")
 
-    def main(self, date, datas):
+    def setup(self, option_chains):
         """ Apply this Pattern's filtering logic to the original option chain """
         raise NotImplementedError("main method not implemented!")
 
-    def merge(self):
-        """
-        This method will merge all option chains stored in the basis into one
-        dataframe that contains all option chains for all dates. This is used
-        for plotting purposes
-        """
-        pass
+    def main(self, test_chain, test_spreads):
+        """ Analyse the processed option chain dataframe by the setup method"""
+        raise NotImplementedError("analyse method not implemented!")

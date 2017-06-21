@@ -3,6 +3,7 @@ Module doc string
 """
 import pandas as pd
 pd.set_option('display.max_rows', 5000)
+pd.set_option('display.float_format', lambda x: '%.2f' % x)
 
 class Kaleidoscope(object):
 
@@ -34,7 +35,7 @@ class Kaleidoscope(object):
         kaleidoscope.add_pattern(MyPattern, period=(15, 25))
         This will execute an optimization for values 15 and 25.
         """
-        self.pattern = pattern(**kwargs)
+        self.pattern = pattern(self.option_feed, **kwargs)
 
     def add_opt_pattern(self, pattern, **kwargs):
         """
@@ -51,9 +52,9 @@ class Kaleidoscope(object):
         kaleidoscope.add_opt_pattern(MyPattern, period=(15,))
         Notice that period is still passed as an iterable ... of just 1 element
         """
-        self.pattern = pattern(**kwargs)
+        self.pattern = pattern(self.option_feed, **kwargs)
 
-    def run(self, mode='stats'):
+    def run(self, mode='analyse'):
         """
         Here we split the full option chain imported from the datafeed
         by the quote date and pass in the daily option chain data to the
@@ -70,20 +71,18 @@ class Kaleidoscope(object):
         quote_list = []
 
         for quote_date in self.option_feed.date_stream:
-            option_chain = self.option_feed.get_option_chains(quote_date)
-            quote_list.append(self.pattern.main(quote_date, option_chain))
+            option_chains = self.option_feed.get_option_chains(quote_date)
+            quote_list.append(self.pattern.setup(option_chains))
 
         self.test_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
-        self.test_chains.sort_values(['spread_symbol', 'quote_date', 'expiration'], ascending=[True, True, True], inplace=True)
-        #self.test_chains = self.test_chains.set_index('spread_symbol')
+        spreads = self.test_chains['spread_symbol'].unique()
 
-        print(len(self.test_chains['spread_symbol'].unique()))
-        #print(self.test_chains[self.test_chains['spread_symbol'] == '.VXX160219C00018000-.VXX160219C00020000'])
+        print(self.test_chains)
 
         if mode == 'backtest':
             # perform backtest with option chains, run each spread with a starting account balance
             # at start of trading or starting and ending on a specific time interval
             pass
-        elif mode == 'stats':
+        elif mode == 'analyse':
             # perform analysis on option chains and return stats
-            pass
+            self.pattern.main(self.test_chains, spreads)

@@ -62,9 +62,7 @@ class SQLiteReader(BaseData):
 
         # loop through opt_params, assign filter by column if applicable
         if symbol not in self.option_chains and kwargs is not None:
-
             query = f"SELECT * FROM {symbol}_option_chain WHERE"
-
             for k, v in kwargs.items():
                 if k == 'start_date':
                     query += f" quote_date >= '{v}' AND"
@@ -77,16 +75,12 @@ class SQLiteReader(BaseData):
 
             # remove the trailing AND
             query = query[:-4]
-
             # may need to apply chunksize if loading large option chain set
             data = pd.read_sql_query(query, self.data_conn)
-
             # normalize dataframe columns
             data = self.normalize_df(data)
-
             unique_quote_dates = data['quote_date'].unique()
             self.option_chains = {elem : pd.DataFrame for elem in unique_quote_dates}
-
             # populate the dictionary
             for key in self.option_chains.keys():
                 self.option_chains[key] = \

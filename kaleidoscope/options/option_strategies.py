@@ -6,7 +6,8 @@ class OptionStrategies(object):
     def generate_offsets(dataframe, shift_col, offsets):
         """
         :param dataframe: Dataframe to attach new offset columns to
-        :param offets: Array of offset values to generate offsetting columns for
+        :param shift_col: The column to create new shifted columns for
+        :param offsets: Array of offset values to generate offsetting columns for
         :return: None
         """
         offsets = offsets.sort_values(ascending=False)
@@ -53,25 +54,40 @@ class OptionStrategies(object):
         OptionStrategies.generate_offsets(spread_chain, 'symbol', offsets)
 
         # calculate the spread's bid and ask prices
-        spread_chain['spread_bid'] = spread_chain.apply(lambda row: row['bid'] - \
-                                                                    row['ask' + '_' + str(row['offset'])], axis=1)
-        spread_chain['spread_ask'] = spread_chain.apply(lambda row: row['ask'] - \
-                                                                    row['bid' + '_' + str(row['offset'])], axis=1)
+        spread_chain['spread_bid'] = spread_chain.apply(lambda row: row['bid'] -
+                                                        row['ask' + '_' +
+                                                        str(row['offset'])],
+                                                        axis=1
+                                                        )
 
-        spread_chain['spread_mark'] = spread_chain.apply(lambda row: (row['spread_bid'] + row['spread_ask']) / 2, axis=1)
+        spread_chain['spread_ask'] = spread_chain.apply(lambda row: row['ask'] -
+                                                        row['bid' + '_' +
+                                                        str(row['offset'])],
+                                                        axis=1
+                                                        )
+
+        spread_chain['spread_mark'] = spread_chain.apply(lambda row: (row['spread_bid'] +
+                                                         row['spread_ask']) / 2,
+                                                         axis=1
+                                                         )
 
         # sum the trade volume of the two strikes
-        spread_chain['spread_volume'] = spread_chain.apply(lambda row: row['trade_volume'] + \
-                                                                       row['trade_volume' + '_' + str(row['offset'])],
-                                                           axis=1)
+        spread_chain['spread_volume'] = spread_chain.apply(lambda row: row['trade_volume'] +
+                                                           row['trade_volume' + '_' +
+                                                           str(row['offset'])],
+                                                           axis=1
+                                                           )
 
         # sum the trade volume of the two strikes
-        spread_chain['spread_symbol'] = spread_chain.apply(lambda row: "." + row['symbol'] + "-." + \
-                                                                       str(row['symbol' + '_' + str(row['offset'])]),
-                                                           axis=1)
+        spread_chain['spread_symbol'] = spread_chain.apply(lambda row: "." + row['symbol'] + "-." +
+                                                           str(row['symbol' + '_' +
+                                                           str(row['offset'])]),
+                                                           axis=1
+                                                           )
 
-        spread_chain = spread_chain[['spread_symbol', 'quote_date', 'expiration', \
-                                     'spread_bid', 'spread_ask', 'spread_mark', 'spread_volume']]
+        spread_chain = spread_chain[['spread_symbol', 'quote_date', 'expiration',
+                                     'spread_bid', 'spread_ask', 'spread_mark',
+                                     'spread_volume']]
 
         spread_chain = spread_chain.dropna()
 

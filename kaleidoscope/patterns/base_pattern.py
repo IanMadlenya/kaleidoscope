@@ -9,7 +9,6 @@ class BasePattern(object):
         self.datafeed = datafeed
 
         # store the process option chain by dates
-        #self.basis = {}
         self.init()
 
     def plot(self):
@@ -20,7 +19,7 @@ class BasePattern(object):
         """ Initialize any instance variables not set by user """
         raise NotImplementedError("init method not implemented!")
 
-    def setup(self, option_chains):
+    def setup(self, quote_date, option_chains):
         """ Apply this Pattern's filtering logic to the original option chain """
         raise NotImplementedError("main method not implemented!")
 

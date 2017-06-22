@@ -1,0 +1,5 @@
+# It is recommended to install Miniconda3 for Python 3.6.1 and Pandas
+#pandas>=0.19.2
+#python-coveralls
+#coverage
+#codecov

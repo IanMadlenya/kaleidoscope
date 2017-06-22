@@ -4,6 +4,7 @@ returns a subset based on convenience methods provided
 by this class to filter for specific option legs.
 """
 import pandas as pd
+import operator
 from kaleidoscope.globals import Period
 
 class OptionQuery(object):
@@ -50,14 +51,100 @@ class OptionQuery(object):
     def closest(self, column, val):
         """
         Returns a dataframe row containing the column item closest to the
-        given value
+        given value.
+
+        :param column: column to look up value
+        :param val: return values closest to this param
+        :return: A new OptionQuery object with filtered dataframe
+
         """
-        return OptionQuery(self._closest(column, val))
+        keyval = self._convert(column, val)
+        abs_dist = (self.option_chain[keyval[0]] - keyval[1]).abs()
+
+        return OptionQuery(self._compare(abs_dist, operator.eq, abs_dist.min()))
+
+    def lte(self, column, val):
+        """
+        Returns a dataframe with rows where column values are less than or
+        equals to the val parameter
+
+        :param column: column to look up value
+        :param val: return values less than or equals to this param
+        :return: A new OptionQuery object with filtered dataframe
+        """
+        keyval = self._convert(column, val)
+        return OptionQuery(self._compare(keyval[0], operator.le, keyval[1]))
+
+    def gte(self, column, val):
+        """
+        Returns a dataframe with rows where column values are greater than or
+        equals to the val parameter
+
+        :param column: column to look up value
+        :param val: return values greater than or equals to this param
+        :return: A new OptionQuery object with filtered dataframe
+        """
+        keyval = self._convert(column, val)
+        return OptionQuery(self._compare(keyval[0], operator.ge, keyval[1]))
+
+    def eq(self, column, val):
+        """
+        Returns a dataframe with rows where column values are
+        equal to this param.
+
+        :param column: column to look up value
+        :param val: return values equals to this param amount
+        :return: A new OptionQuery object with filtered dataframe
+        """
+        keyval = self._convert(column, val)
+        return OptionQuery(self._compare(keyval[0], operator.eq, keyval[1]))
+
+    def lt(self, column, val):
+        """
+        Returns a dataframe with rows where column values are
+        equal to this param.
+
+        :param column: column to look up value
+        :param val: return values less than this param amount
+        :return: A new OptionQuery object with filtered dataframe
+        """
+        keyval = self._convert(column, val)
+        return OptionQuery(self._compare(keyval[0], operator.lt, keyval[1]))
+
+    def gt(self, column, val):
+        """
+        Returns a dataframe with rows where column values are
+        equal to this param.
+
+        :param column: column to look up value
+        :param val: return values greater than this param amount
+        :return: A new OptionQuery object with filtered dataframe
+        """
+        keyval = self._convert(column, val)
+        return OptionQuery(self._compare(keyval[0], operator.gt, keyval[1]))
+
+    def ne(self, column, val):
+        """
+        Returns a dataframe with rows where column values are
+        equal to this param.
+
+        :param column: column to look up value
+        :param val: return values not equal to this param amount
+        :return: A new OptionQuery object with filtered dataframe
+        """
+        keyval = self._convert(column, val)
+        return OptionQuery(self._compare(keyval[0], operator.ne, keyval[1]))
 
     def bracket(self, strike, width, pct=True, pos='mid'):
         """
         Returns the dataframe rows containing the column values
         that are above and below the strike price
+
+        :param strike:
+        :param width:
+        :param pct:
+        :param pos:
+        :return:
         """
         pass
 
@@ -68,10 +155,6 @@ class OptionQuery(object):
         """
         offset = self._offset(column, val, width, mode)
         return self.closest(column, offset)
-
-    def equals(self, column, val):
-        filtered_df = self.option_chain[self.option_chain[column] == val]
-        return OptionQuery(filtered_df)
 
 # GET METHODS ===================================================================================
 
@@ -103,27 +186,42 @@ class OptionQuery(object):
 
 # PRIVATE METHODS ===============================================================================
 
+    def _convert(self, column, val):
+        """
+        In the use case where column and val are datetime and Period instances, respectively,
+        change the column lookup to lookup 't_delta' column and get the actual Period value from
+        Period object.
+
+        :param column: datetime column to lookup
+        :param val: an Enum instance of Period
+        :return: tuple of lookup column and val (converted if needed)
+        """
+        lookup_col = column
+
+        if self.option_chain[column].dtype == 'datetime64[ns]' and isinstance(val, Period):
+            val = val.value
+            lookup_col = 't_delta'
+        else:
+            val = float(val)
+
+        return (lookup_col, val)
+
     def _strip(self):
         """
         Remove unnessesary columns, used for final output of fetch functions
         """
         return self.option_chain.drop('t_delta', axis=1)
 
-    def _closest(self, column, val):
+    def _compare(self, column, op, val):
         """
-        Returns the column item value closest to the lookup value
+        Compares the column value to the val param using the operator passed in op param
+
+        :param column: column to compare with
+        :param op: operator to use for comparison, this is a Python Operator object
+        :param val: value to compare with
+        :return: The filtered option chain that matches the comparison criteria
         """
-        chain = self.option_chain
-        lookup_col = column
-
-        if chain[lookup_col].dtype == 'datetime64[ns]' and isinstance(val, Period):
-            val = val.value
-            lookup_col = 't_delta'
-        else:
-            val = float(val)
-
-        abs_dist = (chain[lookup_col]-val).abs()
-        return chain[abs_dist == abs_dist.min()]
+        return self.option_chain[op(self.option_chain[column], val)]
 
     def _bracket(self, strike, width, mode='pct', pos='mid'):
         """
@@ -143,7 +241,9 @@ class OptionQuery(object):
              'upper'           - the strike price will be the higher priced leg
              'lower'            - the strike price will be the lower priced leg
         """
-        strikes = self.option_chain['strikes'].unique()
+
+        upper_strike = None
+        lower_strike = None
 
         if mode == 'pct':
             if pos == 'lower':

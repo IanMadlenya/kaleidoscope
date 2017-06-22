@@ -72,7 +72,7 @@ class Kaleidoscope(object):
 
         for quote_date in self.option_feed.date_stream:
             option_chains = self.option_feed.get_option_chains(quote_date)
-            quote_list.append(self.pattern.setup(option_chains))
+            quote_list.append(self.pattern.setup(quote_date, option_chains))
 
         self.test_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
         spreads = self.test_chains['spread_symbol'].unique()

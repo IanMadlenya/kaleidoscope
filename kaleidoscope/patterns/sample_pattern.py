@@ -1,8 +1,9 @@
-#pylint: disable=E1101
+# pylint: disable=E1101
 from datetime import date
 from kaleidoscope.patterns.base_pattern import BasePattern
 from kaleidoscope.options.option_strategies import OptionStrategies
 from kaleidoscope.globals import Period
+
 
 class SamplePattern(BasePattern):
     """
@@ -22,18 +23,20 @@ class SamplePattern(BasePattern):
         params = {
             "option_type": "c",
             "start_date": date(2016, 1, 4),
-            "end_date": date(2016, 1, 4),
-            "root": "VXX" # do not analyze option splits
+            "end_date": date(2016, 2, 19),
+            "root": "VXX"  # do not analyze option splits
         }
 
         self.datafeed.subscribe_options("VXX", **params)
 
-    def setup(self, option_chains):
+    def setup(self, quote_date, option_chains):
         """
-        Perform logic to isolate option chains and construct spreads to analyse for each quote date
+        Perform custom strategic logic to isolate option chains and
+        construct spreads to analyse for each quote date.
         """
+
         # Query and return a dataframe with call options expiring in the next 7 weeks
-        options = option_chains['VXX'].fetch()
+        options = option_chains['VXX'].lte('expiration', Period.SEVEN_WEEKS).fetch()
 
         # Batch create bear calls spreads on all strikes
         bear_call_spreads = OptionStrategies.vertical_spread(options, self.SPREAD_WIDTH)

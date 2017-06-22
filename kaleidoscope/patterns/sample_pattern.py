@@ -35,21 +35,30 @@ class SamplePattern(BasePattern):
         construct spreads to analyse for each quote date.
         """
 
-        # Query and return a dataframe with call options expiring in the next 7 weeks
+        # Query and return a dataframe with call options expiring within the next 7 weeks
         options = option_chains['VXX'].lte('expiration', Period.SEVEN_WEEKS).fetch()
 
-        # Batch create bear calls spreads on all strikes
+        # Batch create vertical call spreads on all strikes
         bear_call_spreads = OptionStrategies.vertical_spread(options, self.SPREAD_WIDTH)
 
         return bear_call_spreads
 
     def main(self, test_chain, test_spreads):
         """
+        Perform custom analysis logic with the test_chain and test_spreads
+        created from the setup method of this Pattern.
 
-        :param test_chain:
-        :param test_spreads:
-        :return:
+        :param test_chain: The full set of option chains to test with
+        :param test_spreads: A list of test cases(spreads) to test with
+        :return: TestResult object containing the test results
+
         """
         pass
 
+    def plot(self):
+        """
+
+        :return:
+        """
+        pass
 

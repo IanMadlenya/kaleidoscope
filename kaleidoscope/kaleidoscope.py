@@ -5,6 +5,7 @@ import pandas as pd
 pd.set_option('display.max_rows', 5000)
 pd.set_option('display.float_format', lambda x: '%.2f' % x)
 
+
 class Kaleidoscope(object):
 
     def __init__(self, option_feed=None):
@@ -12,15 +13,16 @@ class Kaleidoscope(object):
         Constructor for kaleidoscope object to process
         options data.
         """
+
+        # Each Kaleidoscope instance is aware of it data feed to source
+        # option from and the pattern to apply analysis logic with.
         self.option_feed = option_feed
         self.pattern = None
-
-        self.test_chains = None
 
         print("hello from kaleidoscope!")
 
     def add_option_feed(self, datafeed):
-        """ Sets this instance to use provided datafeed object """
+        """ Sets this instance to use provided data feed object """
         self.option_feed = datafeed
 
     def add_pattern(self, pattern, **kwargs):
@@ -66,18 +68,18 @@ class Kaleidoscope(object):
         This method will then determine the trading result for each option spread
         created in the Pattern.
         """
-        # process each quote date and pass option chain to pattern
 
+        # process each quote date and pass option chain to pattern
         quote_list = []
 
         for quote_date in self.option_feed.date_stream:
             option_chains = self.option_feed.get_option_chains(quote_date)
             quote_list.append(self.pattern.setup(quote_date, option_chains))
 
-        self.test_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
-        spreads = self.test_chains['spread_symbol'].unique()
+        test_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
+        test_spreads = test_chains['spread_symbol'].unique()
 
-        print(self.test_chains)
+        # print(self.test_chains)
 
         if mode == 'backtest':
             # perform backtest with option chains, run each spread with a starting account balance
@@ -85,4 +87,4 @@ class Kaleidoscope(object):
             pass
         elif mode == 'analyse':
             # perform analysis on option chains and return stats
-            self.pattern.main(self.test_chains, spreads)
+            self.pattern.main(test_chains, test_spreads)

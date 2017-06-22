@@ -3,11 +3,11 @@
 import sqlite3
 import os, os.path, pathlib, pandas as pd
 from feeds.base_data import BaseData
-from kaleidoscope.options.option_query import OptionQuery
 
 # sqlite database path
 PROJECT_DIR = pathlib.Path(__file__).parents[1]
 DATABASE_NAME = "securities.db"
+
 
 class SQLiteReader(BaseData):
     """
@@ -15,34 +15,34 @@ class SQLiteReader(BaseData):
     a sqlite database.
     """
 
-    # map column index from csv file to the option columns used in the library
-    opt_params = (
-        ('nullvalue', float('Nan')),
-        ('symbol', 0),
-        ('underlying_symbol', -1),
-        ('quote_date', 2),
-        ('root', -1),
-        ('expiration', 4),
-        ('strike', 5),
-        ('option_type', 6),
-        ('open', -1),
-        ('high', -1),
-        ('low', -1),
-        ('close', -1),
-        ('trade_volume', 11),
-        ('bid_size', -1),
-        ('bid', 13),
-        ('ask_size', -1),
-        ('ask', 15),
-        ('underlying_price', 16),
-        ('ivol', -1),
-        ('delta', -1),
-        ('gamma', -1),
-        ('theta', -1),
-        ('vega', -1),
-        ('rho', -1),
-        ('open_interest', -1)
-    )
+    # # map column index from csv file to the option columns used in the library
+    # opt_params = (
+    #     ('nullvalue', float('Nan')),
+    #     ('symbol', 0),
+    #     ('underlying_symbol', -1),
+    #     ('quote_date', 2),
+    #     ('root', -1),
+    #     ('expiration', 4),
+    #     ('strike', 5),
+    #     ('option_type', 6),
+    #     ('open', -1),
+    #     ('high', -1),
+    #     ('low', -1),
+    #     ('close', -1),
+    #     ('trade_volume', 11),
+    #     ('bid_size', -1),
+    #     ('bid', 13),
+    #     ('ask_size', -1),
+    #     ('ask', 15),
+    #     ('underlying_price', 16),
+    #     ('ivol', -1),
+    #     ('delta', -1),
+    #     ('gamma', -1),
+    #     ('theta', -1),
+    #     ('vega', -1),
+    #     ('rho', -1),
+    #     ('open_interest', -1)
+    # )
 
     def __init__(self):
 
@@ -60,6 +60,8 @@ class SQLiteReader(BaseData):
         Implement the actual query to grab the dataset from the database.
         """
 
+        option_chains = None
+
         # loop through opt_params, assign filter by column if applicable
         if symbol not in self.option_chains and kwargs is not None:
             query = f"SELECT * FROM {symbol}_option_chain WHERE"
@@ -73,44 +75,35 @@ class SQLiteReader(BaseData):
                 elif k == 'root':
                     query += f" root = '{v}' AND"
 
-            # remove the trailing AND
+            # remove the trailing 'AND'
             query = query[:-4]
-            # may need to apply chunksize if loading large option chain set
+
+            # may need to apply chunk size if loading large option chain set
             data = pd.read_sql_query(query, self.data_conn)
+
             # normalize dataframe columns
-            data = self.normalize_df(data)
+            data = BaseData.normalize_df(data)
             unique_quote_dates = data['quote_date'].unique()
-            self.option_chains = {elem : pd.DataFrame for elem in unique_quote_dates}
+            option_chains = {elem: pd.DataFrame for elem in unique_quote_dates}
+
             # populate the dictionary
-            for key in self.option_chains.keys():
-                self.option_chains[key] = \
-                    {symbol: data[:][data["quote_date"] == key]}
+            for key in option_chains.keys():
+                option_chains[key] = {symbol: data[:][data["quote_date"] == key]}
 
-    def normalize_df(self, dataframe):
-        """ normalize column names using opt_params defined in this class """
-        columns = list()
-        col_names = list()
-
-        for col in SQLiteReader.opt_params:
-            if col[1] != -1 and col[0] != 'nullvalue':
-                # include this column in list
-                columns.append(col[1])
-                col_names.append(col[0])
-
-        dataframe = dataframe.iloc[:, columns]
-        dataframe.columns = col_names
-
-        return dataframe
-
-    def get_option_chains(self, date):
-        """
-        Return the option chain dataframe for the date and ticker
-        from the bar event
-        """
-        if date in self.option_chains:
-            for option_chain_df in self.option_chains[date]:
-                option_qy = OptionQuery(self.option_chains[date][option_chain_df])
-                self.option_chains[date][option_chain_df] = option_qy
-                return self.option_chains[date]
-
-        return None
+        return option_chains
+    #
+    # def normalize_df(self, dataframe):
+    #     """ normalize column names using opt_params defined in this class """
+    #     columns = list()
+    #     col_names = list()
+    #
+    #     for col in SQLiteReader.opt_params:
+    #         if col[1] != -1 and col[0] != 'nullvalue':
+    #             # include this column in list
+    #             columns.append(col[1])
+    #             col_names.append(col[0])
+    #
+    #     dataframe = dataframe.iloc[:, columns]
+    #     dataframe.columns = col_names
+    #
+    #     return dataframe

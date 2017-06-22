@@ -12,12 +12,12 @@ class BasePattern(object):
         self.init()
 
     def plot(self):
-        """ plot the data prepared from the on_data method """
+        """ plot the data prepared from the main method """
         raise NotImplementedError("plot method not implemented!")
 
     def init(self):
         """ Initialize any instance variables not set by user """
-        raise NotImplementedError("init method not implemented!")
+        raise NotImplementedError("init ethod not implemented!")
 
     def setup(self, quote_date, option_chains):
         """ Apply this Pattern's filtering logic to the original option chain """

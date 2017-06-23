@@ -35,7 +35,7 @@ class OptionQuery(object):
 
             # QUERY METHODS =================================================================================
 
-    def put(self):
+    def puts(self):
         """
         Filter the class' copy of the option chain for put options
         """
@@ -43,7 +43,7 @@ class OptionQuery(object):
         chain = chain[chain.option_type.str.contains('p', case=False)]
         return OptionQuery(chain)
 
-    def call(self):
+    def calls(self):
         """
         Filter the class' copy of the option chain for call options
         """

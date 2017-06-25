@@ -48,6 +48,7 @@ class OptionStrategies(object):
 
         # generate the offsetting columns for each offset value
         offsets = spread_chain['offset'].value_counts().index
+        OptionStrategies.generate_offsets(spread_chain, 'strike', offsets)
         OptionStrategies.generate_offsets(spread_chain, 'ask', offsets)
         OptionStrategies.generate_offsets(spread_chain, 'bid', offsets)
         OptionStrategies.generate_offsets(spread_chain, 'trade_volume', offsets)
@@ -81,12 +82,20 @@ class OptionStrategies(object):
         # sum the trade volume of the two strikes
         spread_chain['spread_symbol'] = spread_chain.apply(lambda row: "." + row['symbol'] + "-." +
                                                            str(row['symbol' + '_' +
-                                                           str(row['offset'])]),
+                                                                   str(row['offset'])]),
                                                            axis=1
                                                            )
 
-        spread_chain = spread_chain[['spread_symbol', 'quote_date', 'expiration',
-                                     'spread_bid', 'spread_ask', 'spread_mark',
+        spread_chain.rename(columns={'strike': 'lower_strike'}, inplace=True)
+
+        # get the higher strike of the spread
+        spread_chain['higher_strike'] = spread_chain.apply(lambda row: str(row['strike' + '_' +
+                                                                               str(row['offset'])]),
+                                                           axis=1
+                                                           )
+
+        spread_chain = spread_chain[['spread_symbol', 'quote_date', 'expiration', 'lower_strike',
+                                     'higher_strike', 'spread_bid', 'spread_ask', 'spread_mark',
                                      'spread_volume']]
 
         spread_chain = spread_chain.dropna()

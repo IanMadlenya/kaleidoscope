@@ -1,6 +1,10 @@
 from enum import Enum
+import pathlib
 
-EventType = Enum("EventType", "BAR SIGNAL")
+PROJECT_DIR = pathlib.Path(__file__).parents[1]
+DATA_SUB_DIR = "data"
+OUTPUT_DIR = "output"
+FILE_NAME = "securities"
 
 class Period(Enum):
     DAY = 1
@@ -16,7 +20,8 @@ class Period(Enum):
     FIVE_WEEKS = 35
     SIX_WEEKS = 42
     SEVEN_WEEKS = 49
-    
+
+
 class OrderAction(Enum):
     BUY = 1
     SELL = -1

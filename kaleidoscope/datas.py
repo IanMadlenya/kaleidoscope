@@ -4,18 +4,9 @@ module doc string
 
 from kaleidoscope.options.option_query import OptionQuery
 import os
-import os.path
-import pathlib
 import sqlite3
 import pandas as pd
-
-pd.set_option('display.max_rows', 5000)
-pd.set_option('display.float_format', lambda x: '%.2f' % x)
-pd.set_option('display.expand_frame_repr', False)
-
-PROJECT_DIR = pathlib.Path(__file__).parents[1]
-DATA_SUB_DIR = "data"
-FILE_NAME = "securities"
+import kaleidoscope.globals as gb
 
 # map columns from data source to the standard option columns used in the library
 opt_params = (
@@ -62,7 +53,7 @@ def get(ticker, start, end, algo,
     :param path: Path to the data source
     :param exclude_splits: Should data exclude options created from the underlying's stock splits
     :param option_type: If None, or not passed in, will retrieve both calls and puts of option chain
-    :return:
+    :return: Dataframe containing all option chains as filtered by algo for the specified date range
     """
 
     provider_kwargs = {}
@@ -112,7 +103,7 @@ def sqlite(ticker, start, end, path=None, params=None):
 
     if path is None:
         # use default path if no path given
-        path = os.path.join(os.sep, PROJECT_DIR, DATA_SUB_DIR, FILE_NAME + ".db")
+        path = os.path.join(os.sep, gb.PROJECT_DIR, gb.DATA_SUB_DIR, gb.FILE_NAME + ".db")
 
     try:
         data_conn = sqlite3.connect(path)
@@ -139,7 +130,7 @@ def sqlite(ticker, start, end, path=None, params=None):
 
         # populate the dictionary
         for key in option_chains.keys():
-            option_chains[key] = {ticker: data[:][data["quote_date"] == key]}
+            option_chains[key] = data[:][data["quote_date"] == key]
 
         return option_chains
 
@@ -181,9 +172,8 @@ def _slice(date, chains):
     """
 
     if date in chains:
-        for option_chain_df in chains[date]:
-            option_qy = OptionQuery(chains[date][option_chain_df])
-            chains[date][option_chain_df] = option_qy
-            return chains[date]
+        option_qy = OptionQuery(chains[date])
+        chains[date] = option_qy
+        return chains[date]
 
     return None

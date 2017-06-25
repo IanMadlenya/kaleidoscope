@@ -63,11 +63,21 @@ class OptionQuery(object):
         """
         keyval = self._convert(column, val)
 
-        # TODO: may need to create an absolute distance col in dataframe
-        abs_dist = (self.option_chain[keyval[0]] - keyval[1]).abs()
-        # abs_dist = abs(self.option_chain[keyval[0]] - keyval[1])
+        self.option_chain['abs_dist'] = abs(self.option_chain[keyval[0]] - keyval[1])
+        min_abs_dist = self.option_chain['abs_dist'].min()
 
-        return OptionQuery(self._compare(abs_dist, operator.eq, abs_dist.min()))
+        filtered_df = self._compare('abs_dist', operator.eq, min_abs_dist)
+        filtered_df = filtered_df.drop(['abs_dist'], axis=1)
+
+        return OptionQuery(filtered_df)
+
+    def offset(self, column, offset_from, offset, mode='pct'):
+        """
+        Returns the dataframe rows where the column value are at an offset
+        to the value provided to this function
+        """
+        offset = self._offset(offset_from, offset, mode)
+        return self.closest(column, offset)
 
     def lte(self, column, val):
         """
@@ -149,15 +159,15 @@ class OptionQuery(object):
         """
         return self.option_chain[column].unique()
 
-    def get_closest(self, column, val):
+    def get_underlying_price(self):
         """
-        Returns the column item value closest to the given value
+        Gets the underlying price info from the option chain if available
+        :return: The average of all underlying prices that may have been
+                 recorded in the option chain for a given day.
         """
-        keyval = self._convert(column, val)
-        abs_dist = (self.option_chain[keyval[0]] - keyval[1]).abs()
-
-        chain = self._compare(abs_dist, operator.eq, abs_dist.min())
-        return chain[keyval[0]].iloc[0]
+        if 'underlying_price' in self.option_chain.columns:
+            dates = self.option_chain['underlying_price'].unique()
+            return dates.mean()
 
     # PRIVATE METHODS ===============================================================================
 
@@ -183,9 +193,9 @@ class OptionQuery(object):
 
     def _strip(self):
         """
-        Remove unnessesary columns, used for final output of fetch functions
+        Remove unnecessary columns, used for final output of fetch functions
         """
-        return self.option_chain.drop('t_delta', axis=1)
+        return self.option_chain.drop(['t_delta'], axis=1)
 
     def _compare(self, column, op, val):
         """
@@ -197,6 +207,26 @@ class OptionQuery(object):
         :return: The filtered option chain that matches the comparison criteria
         """
         return self.option_chain[op(self.option_chain[column], val)]
+
+    def _offset(self, offset_from, offset, mode):
+        """
+        Returns the offset value based on the option chain
+
+        :param offset_from: The value to apply offset from
+        :param offset: The amount to offset from the offset_from value
+        :param mode: Defaults to a percentage offset. If 'step' offset value
+                     represents the number of strikes to offset.
+        :return: Value as a result of the specified offset
+        """
+
+        if mode == 'pct':
+            offset = offset_from + (offset_from * offset)
+        elif mode == 'step':  # TODO: implement
+            pass
+        elif mode == 'val':
+            offset = offset_from + offset
+
+        return offset
 
     # FETCH METHODS =================================================================================
 

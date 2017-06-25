@@ -31,3 +31,4 @@ pip-log.txt
 # project specific
 data/
 private/
+output/

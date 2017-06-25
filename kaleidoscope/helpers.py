@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def generate_symbol(sym, exp, strike, opt_type):
     """
     The OCC option symbol consists of 4 parts:

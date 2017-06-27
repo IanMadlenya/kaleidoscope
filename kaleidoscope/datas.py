@@ -2,11 +2,13 @@
 module doc string
 """
 
-from kaleidoscope.options.option_query import OptionQuery
 import os
 import sqlite3
+
 import pandas as pd
+
 import kaleidoscope.globals as gb
+from kaleidoscope.options.option_query import OptionQuery
 
 # map columns from data source to the standard option columns used in the library
 opt_params = (
@@ -37,17 +39,17 @@ opt_params = (
 )
 
 
-def get(ticker, start, end, algo,
-        algo_params=None, provider=None, path=None,
+def get(ticker, start, end, option_filter,
+        filter_params=None, provider=None, path=None,
         exclude_splits=True, option_type=None):
     """
     Helper function for retrieving data as a DataFrame.
 
     :param ticker: the symbol to download
-    :param start: start date of downloaded data
-    :param end: end date of downloaded data
-    :param algo: the option strategy to construct with the data source
-    :param algo_params: the parameters to pass into the option strategy on initialization
+    :param start: expiration start date of downloaded data
+    :param end: expiration end date of downloaded data
+    :param option_filter: the option strategy to construct with the data source
+    :param filter_params: the parameters to pass into the option strategy on initialization
     :param provider: The data source to use for downloading data, reference to function
                      Defaults to sqlite database
     :param path: Path to the data source
@@ -82,9 +84,13 @@ def get(ticker, start, end, algo,
 
     for quote_date in dates:
         sliced_chains = _slice(quote_date, option_chains)
-        quote_list.append(algo(quote_date, sliced_chains, algo_params))
+        quote_list.append(option_filter(quote_date, sliced_chains, filter_params))
 
+    # concatenate each day's dataframe containing the option chains
     test_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
+
+    # assign the name of this concatenated dataframe to be the name of the strategy function
+    test_chains.name = option_filter.__name__
 
     return test_chains
 
@@ -109,7 +115,7 @@ def sqlite(ticker, start, end, path=None, params=None):
         data_conn = sqlite3.connect(path)
 
         # Build the default query
-        query = f"SELECT * FROM {ticker}_option_chain WHERE quote_date >= '{start}' AND quote_date <= '{end}'"
+        query = f"SELECT * FROM {ticker}_option_chain WHERE expiration >= '{start}' AND expiration <= '{end}'"
 
         # loop through opt_params, assign filter by column if applicable
         if params is not None:

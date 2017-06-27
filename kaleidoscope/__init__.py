@@ -1,10 +1,7 @@
 # import data feed module
 
-from . import datas
-from . import stats
-from . import algos
-from . import globals
-
+from kaleidoscope.options import option_filter
+from . import datas, simulation, globals, strategies
 from .datas import get
 
-stats.extend_pandas()
+simulation.extend_pandas()

@@ -31,6 +31,7 @@ class OptionStrategies(object):
         """
         spread_chain = chain.copy()
 
+        # TODO: Throughly test this algorithm for widths with .25, .5, 10, 50, etc increments
         # Calculate the distance of the strikes between each row
         spread_chain['dist'] = spread_chain['strike'].shift(width * -1) - spread_chain['strike']
 
@@ -89,22 +90,19 @@ class OptionStrategies(object):
         spread_chain.rename(columns={'strike': 'lower_strike'}, inplace=True)
 
         # get the higher strike of the spread
-        spread_chain['higher_strike'] = spread_chain.apply(lambda row: str(row['strike' + '_' +
-                                                                               str(row['offset'])]),
+        spread_chain['higher_strike'] = spread_chain.apply(lambda row: row['strike' + '_' +
+                                                                           str(row['offset'])],
                                                            axis=1
                                                            )
 
-        spread_chain = spread_chain[['spread_symbol', 'quote_date', 'expiration', 'lower_strike',
-                                     'higher_strike', 'spread_bid', 'spread_ask', 'spread_mark',
-                                     'spread_volume']]
-
+        # clean up the results, drop NaN
         spread_chain = spread_chain.dropna()
 
-        return spread_chain
+        # check distance equals specified width, trim distances that do not match the width
+        spread_chain['dist_check'] = spread_chain['higher_strike'] - spread_chain['lower_strike']
+        spread_chain = spread_chain[spread_chain['dist_check'] == float(width)]
 
-    @staticmethod
-    def single(leg):
-        """
-        A single call option position
-        """
-        pass
+        spread_chain = spread_chain[['spread_symbol', 'quote_date', 'expiration', 'lower_strike',
+                                     'higher_strike', 'spread_mark']]
+
+        return spread_chain

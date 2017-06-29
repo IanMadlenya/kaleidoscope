@@ -1,5 +1,5 @@
-from enum import Enum
 import pathlib
+from enum import Enum
 
 PROJECT_DIR = pathlib.Path(__file__).parents[1]
 DATA_SUB_DIR = "data"
@@ -22,6 +22,6 @@ class Period(Enum):
     SEVEN_WEEKS = 49
 
 
-class OrderAction(Enum):
+class Action(Enum):
     BUY = 1
     SELL = -1

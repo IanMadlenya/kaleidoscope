@@ -1,5 +1,7 @@
 import pandas as pd
 
+from kaleidoscope.statistics import Statistics
+
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('display.max_rows', None)
 
@@ -88,17 +90,22 @@ class OptionSeries(object):
         for series in sorted(self.option_chains)[-n:]:
             print(self.option_chains[series])
 
-    def describe(self, periods=None, strikes=10):
+    def describe(self, prices, period=None):
         """
-
-        :param periods:
-        :param strikes:
-        :return:
+        Display statistics for the chose price points and periods
+        :param prices: A price point to generate statistics for, can also be a list of price points
+        :param period: Periods range to base statistics on
+        :return: None
         """
-        if periods is None:
-            periods = [0, -1]
+        stats = Statistics(self.option_chains, prices, period)
+        stats.display()
 
-        for expiry in self.option_chains:
-            temp = self.option_chains[expiry]
-            # print(temp.iloc[:, 0])
-            print(temp)
+    def merge(self, other):
+        """
+        Merge this OptionSeries with another, adding all prices together
+        to form a new OptionSeries data set.
+
+        :param other: The other OptionSeries object to merge with this one
+        :return: A new OptionSeries object with merged data
+        """
+        pass

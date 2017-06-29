@@ -9,6 +9,8 @@ import sqlite3
 import pandas as pd
 
 import kaleidoscope.globals as gb
+from kaleidoscope.option_frame import OptionFrame
+from kaleidoscope.option_series import OptionSeries
 from kaleidoscope.options.option_query import OptionQuery
 
 # map columns from data source to the standard option columns used in the library
@@ -42,11 +44,11 @@ opt_params = (
 
 def get(ticker, start, end, option_filter,
         filter_params=None, provider=None, path=None,
-        exclude_splits=True, option_type=None):
+        include_splits=False, dropna=True, option_type=None):
     """
     Helper function for retrieving data as a DataFrame.
 
-    :param ticker: the symbol to download
+    :param ticker: the symbol(s) to download, can be a string with comma separated tickers
     :param start: expiration start date of downloaded data
     :param end: expiration end date of downloaded data
     :param option_filter: the option strategy to construct with the data source
@@ -54,7 +56,7 @@ def get(ticker, start, end, option_filter,
     :param provider: The data source to use for downloading data, reference to function
                      Defaults to sqlite database
     :param path: Path to the data source
-    :param exclude_splits: Should data exclude options created from the underlying's stock splits
+    :param include_splits: Should data exclude options created from the underlying's stock splits
     :param option_type: If None, or not passed in, will retrieve both calls and puts of option chain
     :return: Dataframe containing all option chains as filtered by algo for the specified date range
     """
@@ -65,35 +67,49 @@ def get(ticker, start, end, option_filter,
     if provider is None:
         provider = sqlite
 
-    # exclude option chains created from the underlying's stock split
-    if exclude_splits:
-        provider_kwargs['root'] = ticker
+    # TODO: parse ticker param, if multiple ticker specified loop and grab all data
+    tickers = [t.strip() for t in ticker.split(',')]
+    datas = []
 
-    if option_type == 'c':
-        provider_kwargs['option_type'] = 'c'
+    for t in tickers:
+        # exclude option chains created from the underlying's stock split
+        if not include_splits:
+            provider_kwargs['root'] = ticker
 
-    if option_type == 'p':
-        provider_kwargs['option_type'] = 'p'
+        if option_type == 'c':
+            provider_kwargs['option_type'] = 'c'
 
-    # Providers will return an dictionary where quote_dates is key,
-    # and DataFrames of option chains for that date as value
-    option_chains = provider(ticker, start, end, path, provider_kwargs)
+        if option_type == 'p':
+            provider_kwargs['option_type'] = 'p'
 
-    # process each quote date and pass option chain to pattern
-    quote_list = []
-    dates = sorted(option_chains.keys())
+        # TODO: check that the query returned data
+        # Providers will return an dictionary where quote_dates is key,
+        # and DataFrames of option chains for that date as value
+        option_chains = provider(ticker, start, end, path, provider_kwargs)
 
-    for quote_date in dates:
-        sliced_chains = _slice(quote_date, option_chains)
-        quote_list.append(option_filter(quote_date, sliced_chains, filter_params))
+        # process each quote date and pass option chain to pattern
+        quote_list = []
+        dates = sorted(option_chains.keys())
 
-    # concatenate each day's dataframe containing the option chains
-    test_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
+        for quote_date in dates:
+            sliced_chains = _slice(quote_date, option_chains)
+            quote_list.append(option_filter(quote_date, sliced_chains, filter_params))
 
-    # assign the name of this concatenated dataframe to be the name of the strategy function
-    test_chains.name = option_filter.__name__
+        # concatenate each day's dataframe containing the option chains
+        test_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
 
-    return test_chains
+        # assign the name of this concatenated dataframe to be the name of the strategy function
+        test_chains.name = option_filter.__name__
+
+        # add the result set to datas array
+        datas.append(test_chains)
+
+    # return an OptionSeries object if datas contain one series, otherwise
+    # return a OptionFrame object.
+    if len(datas) > 1:
+        return OptionFrame(datas, dropna=dropna)
+    else:
+        return OptionSeries(datas[0], dropna=dropna)
 
 
 def sqlite(ticker, start, end, path=None, params=None):

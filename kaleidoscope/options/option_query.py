@@ -18,10 +18,12 @@ class OptionQuery(object):
     dataframe to allow for method chaining
     """
 
-    def __init__(self, option_chain):
+    def __init__(self, option_chain, inplace=False):
         # Create a copy of the option chain dataframe to prevent modifying
         # the original dataframe and to able to reuse it for other queries
-        self.option_chain = option_chain.copy()
+        self.option_chain = option_chain if not inplace else option_chain.copy()
+
+        self.option_chain.reset_index(drop=True, inplace=True)
 
         # create t_delta column if not present
         if 't_delta' not in self.option_chain.columns:
@@ -151,6 +153,28 @@ class OptionQuery(object):
         keyval = self._convert(column, val)
         return OptionQuery(self._compare(keyval[0], operator.ne, keyval[1]))
 
+    def min(self, column):
+        """
+        Return the row with the min value of the specified column
+        :param column: column to look up min value
+        :return: Series object containing row with min value of column
+        """
+
+        # TODO: check this works on a date field
+        idx_min = self.option_chain[column].idxmin()
+        return self.option_chain.iloc[idx_min]
+
+    def max(self, column):
+        """
+        Return the row with the max value of the specified column
+        :param column: column to look up min value
+        :return: Series object containing row with max value of column
+        """
+
+        # TODO: check this works on a date field
+        idx_max = self.option_chain[column].idxmax()
+        return self.option_chain.iloc[idx_max]
+
     # GET METHODS ===================================================================================
 
     def get(self, column):
@@ -158,6 +182,17 @@ class OptionQuery(object):
         Returns the specified column's unique values in an array
         """
         return self.option_chain[column].unique()
+
+    def get_offset(self, offset_from, offset, mode='pct'):
+        """
+        Get the offset value based on the params
+        :param offset_from: the value to calculate offset from
+        :param offset: the offset amount based on mode selected
+        :param mode: the method to calculate the offset amount.
+                     modes: pct (percent), step (strike steps), val (value amount)
+        :return: amount resulting from the offset
+        """
+        return self._offset(offset_from, offset, mode)
 
     def get_underlying_price(self):
         """

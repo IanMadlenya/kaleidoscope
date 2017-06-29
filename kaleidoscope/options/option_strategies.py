@@ -17,6 +17,25 @@ class OptionStrategies(object):
             dataframe[col] = dataframe[shift_col].shift(offset)
 
     @staticmethod
+    def moneyness(option_type, underlying, h_strike, l_strike):
+        """
+        Determine the moneyness of an option
+        :param option_type: option type, 'c' or 'p'
+        :param underlying: price of the underlying asset of option
+        :param h_strike: higher strike of the spread
+        :param l_strike: lower strike of the spread
+        :return: distance between the higher strike and underlying if puts,
+                 distance between the lower strike and underlying if calls
+        """
+        # TODO: may want to normalize option_type coming in from data source
+        if (option_type == 'c' and underlying < l_strike) or (option_type == 'p' and underlying > h_strike):
+            return "ITM"
+        elif (option_type == 'c' and underlying > l_strike) or (option_type == 'p' and underlying < h_strike):
+            return "OTM"
+        elif (option_type == 'c' and underlying == l_strike) or (option_type == 'p' and underlying == h_strike):
+            return "ATM"
+
+    @staticmethod
     def vertical_spread(chain, width):
         """
 
@@ -31,7 +50,7 @@ class OptionStrategies(object):
         """
         spread_chain = chain.copy()
 
-        # TODO: Throughly test this algorithm for widths with .25, .5, 10, 50, etc increments
+        # TODO: Thoroughly test this algorithm for widths with .25, .5, 10, 50, etc increments
         # Calculate the distance of the strikes between each row
         spread_chain['dist'] = spread_chain['strike'].shift(width * -1) - spread_chain['strike']
 
@@ -82,8 +101,7 @@ class OptionStrategies(object):
 
         # sum the trade volume of the two strikes
         spread_chain['spread_symbol'] = spread_chain.apply(lambda row: "." + row['symbol'] + "-." +
-                                                           str(row['symbol' + '_' +
-                                                                   str(row['offset'])]),
+                                                                       str(row['symbol' + '_' + str(row['offset'])]),
                                                            axis=1
                                                            )
 
@@ -102,7 +120,7 @@ class OptionStrategies(object):
         spread_chain['dist_check'] = spread_chain['higher_strike'] - spread_chain['lower_strike']
         spread_chain = spread_chain[spread_chain['dist_check'] == float(width)]
 
-        spread_chain = spread_chain[['spread_symbol', 'quote_date', 'expiration', 'lower_strike',
-                                     'higher_strike', 'spread_mark']]
+        spread_chain = spread_chain[['spread_symbol', 'quote_date', 'expiration', 'spread_mark',
+                                     'underlying_price', 'lower_strike', 'higher_strike']]
 
         return spread_chain

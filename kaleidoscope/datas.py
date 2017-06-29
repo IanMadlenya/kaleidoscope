@@ -2,6 +2,7 @@
 module doc string
 """
 
+import datetime
 import os
 import sqlite3
 
@@ -142,6 +143,17 @@ def sqlite(ticker, start, end, path=None, params=None):
 
     except IOError as err:
         print("Database Connection Error: ", err)
+
+
+def output_to_csv(prices):
+    """
+    Thin wrapper method to output this dataframe to csv file
+    :param prices: This is the dataframe itself
+    :return:
+    """
+    filename = '%s_%s' % (prices.name, datetime.date.today())
+    csv_dir = os.path.join(os.sep, gb.PROJECT_DIR, gb.OUTPUT_DIR, filename + ".csv")
+    prices.to_csv(csv_dir)
 
 
 def _normalize(dataframe):

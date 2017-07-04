@@ -1,6 +1,9 @@
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from matplotlib import cm
 
-from kaleidoscope.statistics import Statistics
+from kaleidoscope.group_performance import GroupPerformance
 
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('display.max_rows', None)
@@ -11,7 +14,7 @@ class OptionSeries(object):
     This class contains the time series data for an option strategy.
     """
 
-    def __init__(self, data, index=None, dropna=False):
+    def __init__(self, ticker, data, index=None, dropna=False):
         """
         Initialize this class with a dataframe of option strategy prices by
         symbol, quote date, expiration, mark, other metrics, etc
@@ -19,6 +22,7 @@ class OptionSeries(object):
         This class will then store the data in a dictionary by expiration dates
         and provide methods that will act on this data.
 
+        :param ticker: the ticker of the OptionSeries Dataframe
         :param data: Dataframe containing the time series data of an option strategy.
                      This dataframe must contain the following columns:
                      symbol, quote_date, expiration, mark
@@ -28,49 +32,36 @@ class OptionSeries(object):
         :param dropna: Drop all rows containing NaN in OptionSeries
         """
 
-        # TODO: check index param's length is equal to 4
+        # TODO: check index param's length is equal to 3
         if not isinstance(data, pd.DataFrame):
             raise ValueError('data param must be of pandas type DataFrame')
-        elif len(data.columns) < 4:
-            raise ValueError('Dataframe must contain at least 4 columns')
-        elif index is not None and len(index) != 4:
-            raise ValueError('index length must be 4')
+        elif len(data.columns) < 3:
+            raise ValueError('Dataframe must contain at least 3 columns')
+        elif index is not None and len(index) != 3:
+            raise ValueError('index length must be 3')
         else:
-            self.data = data
+            self.ticker = ticker
+            self.option_chains = {}
+
+            data.set_index(['expiration'], inplace=True)
+            data.sort_index(inplace=True)
+
             sym_idx = 0
             date_idx = 1
-            exp_idx = 2
-            val_idx = 3
+            val_idx = 2
 
             if index is not None:
                 # if index list is passed, infer the expiration column from the list
                 sym_idx = index[0]
                 date_idx = index[1]
-                exp_idx = index[2]
-                val_idx = index[3]
+                val_idx = index[2]
 
-            expiries = self.data.iloc[:, exp_idx].unique()
+            for exp, df in data.groupby(level=0):
+                col_names = df.columns.values
+                exp = pd.to_datetime(str(exp)).strftime('%Y-%m-%d')
 
-            expiry_dates = [pd.to_datetime(str(t)).strftime('%Y-%m-%d') for t in expiries]
-
-            self.option_chains = {date: pd.DataFrame for date in expiry_dates}
-
-            # populate the dictionary
-            for expiry_date in self.option_chains.keys():
-                self.option_chains[expiry_date] = self.data[:][self.data["expiration"] == expiry_date]
-
-            # normalize the option series
-            self.results = {}
-            for expiry_date in self.option_chains:
-                # save some typing
-                op = self.option_chains[expiry_date]
-                col_names = op.columns.values
-
-                # pivot the option_series
-                pivotable = op.pivot(index=col_names[sym_idx], columns=col_names[date_idx], values=col_names[val_idx])
-
-                if not pivotable.empty:
-                    self.option_chains[expiry_date] = pivotable if not dropna else pivotable.dropna()
+                df = df.pivot(index=col_names[sym_idx], columns=col_names[date_idx], values=col_names[val_idx]).dropna()
+                self.option_chains[exp] = df if not dropna else df.dropna()
 
     def head(self, n=5):
         """
@@ -90,22 +81,44 @@ class OptionSeries(object):
         for series in sorted(self.option_chains)[-n:]:
             print(self.option_chains[series])
 
-    def describe(self, prices, period=None):
+    def calc_stats(self, spread_values, period_start=None, period_end=None):
         """
-        Display statistics for the chose price points and periods
-        :param prices: A price point to generate statistics for, can also be a list of price points
-        :param period: Periods range to base statistics on
-        :return: None
+        Display performance statistics for the chose price points and periods
+        
+        :param spread_values: A price point to generate statistics for, can also be a list of price points
+        :param period_start: Periods range to base statistics on. A list of slice indices
+        :param period_end: Periods range to base statistics on. A list of slice indices
+        :return: Performance object
         """
-        stats = Statistics(self.option_chains, prices, period)
-        stats.display()
 
-    def merge(self, other):
-        """
-        Merge this OptionSeries with another, adding all prices together
-        to form a new OptionSeries data set.
+        if isinstance(spread_values, tuple):
+            return GroupPerformance(self.ticker, self.option_chains, period_start, period_end, spread_values)
+        else:
+            raise ValueError("spread_value must be of type tuple")
 
-        :param other: The other OptionSeries object to merge with this one
-        :return: A new OptionSeries object with merged data
+    def plot(self, exp):
         """
-        pass
+        Plot this OptionSeries with a surface plot for an expiration cycle.
+
+        :param exp: The expiration to plot for
+        :return:
+        """
+
+        data = self.option_chains[exp]
+
+        # reset dataframe labels and column names to be numeric
+        data.columns = [i for i in range(data.shape[1])]
+        data.reset_index(inplace=True)
+        data.drop('spread_symbol', axis=1, inplace=True)
+
+        x = data.columns
+        y = data.index
+
+        X, Y = np.meshgrid(x, y)
+        Z = data
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0)
+
+        plt.show()

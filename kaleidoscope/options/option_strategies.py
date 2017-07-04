@@ -66,6 +66,7 @@ class OptionStrategies(object):
         spread_chain['offset'] = spread_chain['offset'].astype(int)
         spread_chain = spread_chain.drop(['dist', 'factor'], axis=1)
 
+        # TODO: remove hard code below, should generate offset for each column
         # generate the offsetting columns for each offset value
         offsets = spread_chain['offset'].value_counts().index
         OptionStrategies.generate_offsets(spread_chain, 'strike', offsets)

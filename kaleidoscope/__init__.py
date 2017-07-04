@@ -2,8 +2,8 @@
 
 from pandas.core.base import PandasObject
 
-from kaleidoscope.options import option_filter
-from . import datas, globals, strategies
+from kaleidoscope.options import option_strategy
+from . import datas, globals, strategies, performance
 from .datas import get
 from .globals import Action
 from .option_series import OptionSeries

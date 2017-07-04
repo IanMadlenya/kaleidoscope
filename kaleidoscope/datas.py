@@ -42,7 +42,7 @@ opt_params = (
 )
 
 
-def get(ticker, start, end, option_filter,
+def get(ticker, start, end, option_strategy,
         filter_params=None, provider=None, path=None,
         include_splits=False, dropna=True, option_type=None):
     """
@@ -51,12 +51,13 @@ def get(ticker, start, end, option_filter,
     :param ticker: the symbol(s) to download, can be a string with comma separated tickers
     :param start: expiration start date of downloaded data
     :param end: expiration end date of downloaded data
-    :param option_filter: the option strategy to construct with the data source
+    :param option_strategy: the option strategy to construct with the data source
     :param filter_params: the parameters to pass into the option strategy on initialization
     :param provider: The data source to use for downloading data, reference to function
                      Defaults to sqlite database
     :param path: Path to the data source
     :param include_splits: Should data exclude options created from the underlying's stock splits
+    :param dropna: drop NaN from resulting strategy prices
     :param option_type: If None, or not passed in, will retrieve both calls and puts of option chain
     :return: Dataframe containing all option chains as filtered by algo for the specified date range
     """
@@ -69,12 +70,12 @@ def get(ticker, start, end, option_filter,
 
     # TODO: parse ticker param, if multiple ticker specified loop and grab all data
     tickers = [t.strip() for t in ticker.split(',')]
-    datas = []
+    datas = {}
 
     for t in tickers:
         # exclude option chains created from the underlying's stock split
         if not include_splits:
-            provider_kwargs['root'] = ticker
+            provider_kwargs['root'] = t
 
         if option_type == 'c':
             provider_kwargs['option_type'] = 'c'
@@ -85,7 +86,7 @@ def get(ticker, start, end, option_filter,
         # TODO: check that the query returned data
         # Providers will return an dictionary where quote_dates is key,
         # and DataFrames of option chains for that date as value
-        option_chains = provider(ticker, start, end, path, provider_kwargs)
+        option_chains = provider(t, start, end, path, provider_kwargs)
 
         # process each quote date and pass option chain to pattern
         quote_list = []
@@ -93,23 +94,23 @@ def get(ticker, start, end, option_filter,
 
         for quote_date in dates:
             sliced_chains = _slice(quote_date, option_chains)
-            quote_list.append(option_filter(quote_date, sliced_chains, filter_params))
+            quote_list.append(option_strategy(quote_date, sliced_chains, filter_params))
 
         # concatenate each day's dataframe containing the option chains
         test_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
 
         # assign the name of this concatenated dataframe to be the name of the strategy function
-        test_chains.name = option_filter.__name__
+        test_chains.name = option_strategy.__name__
 
         # add the result set to datas array
-        datas.append(test_chains)
+        datas[t] = test_chains
 
     # return an OptionSeries object if datas contain one series, otherwise
     # return a OptionFrame object.
     if len(datas) > 1:
         return OptionFrame(datas, dropna=dropna)
     else:
-        return OptionSeries(datas[0], dropna=dropna)
+        return OptionSeries(list(datas.keys())[0], list(datas.values())[0], dropna=dropna)
 
 
 def sqlite(ticker, start, end, path=None, params=None):
@@ -125,6 +126,7 @@ def sqlite(ticker, start, end, path=None, params=None):
     """
 
     if path is None:
+        # TODO: allow for various start and end date configurations
         # use default path if no path given
         path = os.path.join(os.sep, gb.PROJECT_DIR, gb.DATA_SUB_DIR, gb.FILE_NAME + ".db")
 
@@ -132,13 +134,13 @@ def sqlite(ticker, start, end, path=None, params=None):
         data_conn = sqlite3.connect(path)
 
         # Build the default query
-        query = f"SELECT * FROM {ticker}_option_chain WHERE expiration >= '{start}' AND expiration <= '{end}'"
+        query = "SELECT * FROM %s_option_chain WHERE expiration >= '%s' AND expiration <= '%s'" % (ticker, start, end)
 
         # loop through opt_params, assign filter by column if applicable
         if params is not None:
             query += " AND"
             for k, v in params.items():
-                query += f" {k} = '{v}' AND"
+                query += " %s = '%s' AND" % (k, v)
 
             # remove the trailing 'AND'
             query = query[:-4]

@@ -2,7 +2,7 @@ from kaleidoscope.globals import Period
 from kaleidoscope.options.option_strategies import OptionStrategies
 
 
-def vertical_spreads_seven_weeks(quote_date, option_chains, strategy_params=None):
+def vertical_spreads(quote_date, option_chains, strategy_params=None):
     """
     This filters for vertical spreads that expire within 7 weeks.
 

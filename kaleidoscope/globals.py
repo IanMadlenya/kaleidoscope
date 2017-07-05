@@ -36,3 +36,8 @@ class Period(Enum):
 class Action(Enum):
     BUY = 1
     SELL = -1
+
+
+class OptionType(Enum):
+    CALL = 'c'
+    PUT = 'p'

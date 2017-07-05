@@ -1,3 +1,9 @@
+import pandas as pd
+
+from kaleidoscope.option_series import OptionSeries
+from kaleidoscope.options.option_query import OptionQuery
+
+
 class OptionStrategies(object):
     """
     Static methods to define option strategies
@@ -125,3 +131,39 @@ class OptionStrategies(object):
                                      'underlying_price', 'lower_strike', 'higher_strike']]
 
         return spread_chain
+
+    @staticmethod
+    def iron_condor(chain, call_spread_width, put_spread_width):
+        pass
+
+    @staticmethod
+    def custom(chain, **kwargs):
+        pass
+
+
+def construct(strategy, chains, **kwargs):
+    """
+    This is a convenience method to allow for creation of option spreads
+    from predefined sources.
+
+    :param strategy: The option strategy filter to use
+    :param chains: Option chains data to use. This data should come from data.get() method
+    :param kwargs: Parameters used to construct the spreads
+    :return:
+    """
+
+    # process each quote date and pass option chain to strategy
+    quote_list = []
+    dates = sorted(chains.keys())
+
+    for quote_date in dates:
+        option_qy = OptionQuery(chains[quote_date])
+        quote_list.append(strategy(quote_date, option_qy, **kwargs))
+
+    # concatenate each day's dataframe containing the option chains
+    spread_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
+
+    # assign the name of this concatenated dataframe to be the name of the strategy function
+    spread_chains.name = strategy.__name__
+
+    return OptionSeries(spread_chains)

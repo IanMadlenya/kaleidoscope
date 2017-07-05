@@ -15,18 +15,17 @@ class GroupPerformance(dict):
     position or name via the [] accessor.
     """
 
-    def __init__(self, ticker, option_chains, period_start, period_end, *spread_values):
+    def __init__(self, option_chains, period_start, period_end, *spread_values):
 
         super(GroupPerformance, self).__init__()
 
         self.perfs = []
         self.period_start = period_start
         self.period_end = period_end
-        self.ticker = ticker
         self.option_chains = option_chains
 
         for value in spread_values:
-            self.perfs.append(Performance(ticker, option_chains, value, period_start, period_end))
+            self.perfs.append(Performance(option_chains, value, period_start, period_end))
 
     def __getitem__(self, key):
         if type(key) == int:
@@ -42,7 +41,7 @@ class GroupPerformance(dict):
         """
         if isinstance(spread_values, tuple):
             for value in spread_values:
-                self.perfs.append(Performance(self.ticker, self.option_chains, value,
+                self.perfs.append(Performance(self.option_chains, value,
                                               self.period_start, self.period_end))
         else:
             raise ValueError("Must add only objects of type Performance")

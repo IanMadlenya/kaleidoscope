@@ -7,7 +7,7 @@ import operator
 
 import pandas as pd
 
-from kaleidoscope.globals import Period
+from kaleidoscope.globals import Period, OptionType
 
 
 class OptionQuery(object):
@@ -52,6 +52,18 @@ class OptionQuery(object):
         chain = self.option_chain
         chain = chain[chain.option_type.str.contains('c', case=False)]
         return OptionQuery(chain)
+
+    def option_type(self, option_type):
+        """
+        Filter the class' copy of the option chain for specified option type
+        """
+
+        if isinstance(option_type, OptionType):
+            chain = self.option_chain
+            chain = chain[chain.option_type.str.contains(option_type.value, case=False)]
+            return OptionQuery(chain)
+        else:
+            raise ValueError("option_type must be of type OptionType")
 
     def closest(self, column, val):
         """

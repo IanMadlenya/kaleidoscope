@@ -14,7 +14,7 @@ class OptionSeries(object):
     This class contains the time series data for an option strategy.
     """
 
-    def __init__(self, ticker, data, index=None, dropna=False):
+    def __init__(self, data, index=None, dropna=False):
         """
         Initialize this class with a dataframe of option strategy prices by
         symbol, quote date, expiration, mark, other metrics, etc
@@ -22,7 +22,6 @@ class OptionSeries(object):
         This class will then store the data in a dictionary by expiration dates
         and provide methods that will act on this data.
 
-        :param ticker: the ticker of the OptionSeries Dataframe
         :param data: Dataframe containing the time series data of an option strategy.
                      This dataframe must contain the following columns:
                      symbol, quote_date, expiration, mark
@@ -40,7 +39,6 @@ class OptionSeries(object):
         elif index is not None and len(index) != 3:
             raise ValueError('index length must be 3')
         else:
-            self.ticker = ticker
             self.option_chains = {}
 
             data.set_index(['expiration'], inplace=True)
@@ -92,7 +90,7 @@ class OptionSeries(object):
         """
 
         if isinstance(spread_values, tuple):
-            return GroupPerformance(self.ticker, self.option_chains, period_start, period_end, spread_values)
+            return GroupPerformance(self.option_chains, period_start, period_end, spread_values)
         else:
             raise ValueError("spread_value must be of type tuple")
 

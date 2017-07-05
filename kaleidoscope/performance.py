@@ -8,7 +8,7 @@ class Performance(object):
     that will calculate across multiple expiration cycles
     """
 
-    def __init__(self, ticker, series, spread_value=1.00, period_start=None, period_end=None):
+    def __init__(self, series, spread_value=1.00, period_start=None, period_end=None):
         """
         :param series: the OptionSeries object's option_chain to analyse
         :param spread_value: spread_value represents a specific spread to follow
@@ -20,7 +20,6 @@ class Performance(object):
         self.period_start = period_start
         self.period_end = period_end
         self.spread_value = spread_value
-        self.ticker = ticker
         self.name = self._name()
 
         # array containing the results for each time period
@@ -33,7 +32,7 @@ class Performance(object):
         Generate a name for this performance object based on the initialized values
         :return:
         """
-        return self.ticker + " at " + str(self.spread_value[0])
+        return " at " + str(self.spread_value[0])
 
     def plot(self):
         pass

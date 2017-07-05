@@ -1,6 +1,7 @@
 import time
 
 import kaleidoscope as kd
+from kaleidoscope.globals import OptionType
 
 
 def start():
@@ -8,15 +9,21 @@ def start():
     # program timer
     program_starts = time.time()
 
-    # gather all historical option prices for VXX vertical call spreads for the specified expiration dates
-    data = kd.get('VXX', start='2016-02-19', end='2016-12-31',
-                  option_strategy=kd.option_strategy.vertical_spreads,
-                  option_type='c'
-                  )
+    # VXX Call Credit Spreads vs. Put Debit Spreads ==========================================
 
-    # show results for selling vertical call spreads for 1.00 credit
-    perf = data.calc_stats(spread_values=(1.0,))
-    perf.describe()
+    data = kd.get('VXX', start='2016-02-19', end='2016-02-19')
+
+    # construct put vertical spreads (returns OptionSeries object)
+    put_spreads = kd.construct(kd.option_strategy.vertical_spreads, data, option_type=OptionType.PUT)
+
+    # construct call vertical spreads (returns OptionSeries object)
+    call_spreads = kd.construct(kd.option_strategy.vertical_spreads, data, option_type=OptionType.CALL)
+
+    # construct custom spreads
+    # custom_spread = kd.construct(kd.option_strategy.custom, data)
+
+    # construct iron condor with convenience method
+    # iron_condor = kd.construct(kd.option_strategy.iron_condors, data)
 
     # plot period vs prices for all expiry cycles, should automatically rebase each expiration data set
     # perf.plot()

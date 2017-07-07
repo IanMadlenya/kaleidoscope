@@ -3,40 +3,47 @@ module doc string
 """
 
 import datetime
+import operator as op
 import os
 import sqlite3
 
 import pandas as pd
 
 import kaleidoscope.globals as gb
-from kaleidoscope.options.option_query import OptionQuery
 
-# map columns from data source to the standard option columns used in the library
+# map columns from data source to the standard option columns used in the library.
+# first position of tuple: column names used in program
+# second position of tuple: column index of the source data that maps to the column in this program
+#                           -1 means do not map this column
+# third position of tuple: 0 if this column should not be shifted when constructing a spread, 1 means
+#                          the column value should be merged during spread construction.
+
+
 opt_params = (
-    ('symbol', 0),
-    ('underlying_symbol', -1),
-    ('quote_date', 2),
-    ('root', -1),
-    ('expiration', 4),
-    ('strike', 5),
-    ('option_type', 6),
-    ('open', -1),
-    ('high', -1),
-    ('low', -1),
-    ('close', -1),
-    ('trade_volume', 11),
-    ('bid_size', -1),
-    ('bid', 13),
-    ('ask_size', -1),
-    ('ask', 15),
-    ('underlying_price', 16),
-    ('iv', -1),
-    ('delta', -1),
-    ('gamma', -1),
-    ('theta', -1),
-    ('vega', -1),
-    ('rho', -1),
-    ('open_interest', -1)
+    ('symbol', 0, 1, None),
+    ('underlying_symbol', -1, 0, None),
+    ('quote_date', 2, 0, None),
+    ('root', -1, 0, None),
+    ('expiration', 4, 0, None),
+    ('strike', 5, 1, None),
+    ('option_type', 6, 0, None),
+    ('open', -1, 0, None),
+    ('high', -1, 0, None),
+    ('low', -1, 0, None),
+    ('close', -1, 0, None),
+    ('trade_volume', 11, 1, op.add),
+    ('bid_size', -1, 1, op.add),
+    ('bid', 13, 1, op.sub),
+    ('ask_size', -1, 1, op.add),
+    ('ask', 15, 1, op.sub),
+    ('underlying_price', 16, 0, None),
+    ('iv', -1, 1, None),
+    ('delta', -1, 1, op.sub),
+    ('gamma', -1, 1, op.sub),
+    ('theta', -1, 1, op.sub),
+    ('vega', -1, 1, op.sub),
+    ('rho', -1, 1, op.sub),
+    ('open_interest', -1, 1, op.add)
 )
 
 
@@ -66,8 +73,7 @@ def get(ticker, start, end, option_strategy=None,
     if provider is None:
         provider = sqlite
 
-    datas = {}
-
+    # TODO: move this into sqlite function
     # exclude option chains created from the underlying's stock split
     if not include_splits:
         provider_kwargs['root'] = ticker
@@ -82,34 +88,6 @@ def get(ticker, start, end, option_strategy=None,
     # Providers will return an dictionary where quote_dates is key,
     # and DataFrames of option chains for that date as value
     return provider(ticker, start, end, path, provider_kwargs)
-
-    # if option_strategy is not None:
-    #     # process each quote date and pass option chain to pattern
-    #     quote_list = []
-    #     dates = sorted(option_chains.keys())
-    #
-    #     for quote_date in dates:
-    #         sliced_chains = _slice(quote_date, option_chains)
-    #         quote_list.append(option_strategy(quote_date, sliced_chains, filter_params))
-    #
-    #     # concatenate each day's dataframe containing the option chains
-    #     test_chains = pd.concat(quote_list, axis=0, ignore_index=True, copy=False)
-    #
-    #     # assign the name of this concatenated dataframe to be the name of the strategy function
-    #     test_chains.name = option_strategy.__name__
-    #
-    #     # add the result set to datas array
-    #     datas[t] = test_chains
-    # else:
-    # datas[ticker] = option_chains
-
-    # return an OptionSeries object if datas contain one series, otherwise
-    # return a OptionFrame object.
-    # if len(datas) > 1:
-    #     return OptionFrame(datas, dropna=dropna)
-    # else:
-    #     return OptionSeries(list(datas.keys())[0], list(datas.values())[0], dropna=dropna)
-    # return datas
 
 
 def sqlite(ticker, start, end, path=None, params=None):
@@ -127,7 +105,7 @@ def sqlite(ticker, start, end, path=None, params=None):
     if path is None:
         # TODO: allow for various start and end date configurations
         # use default path if no path given
-        path = os.path.join(os.sep, gb.PROJECT_DIR, gb.DATA_SUB_DIR, gb.FILE_NAME + ".db")
+        path = os.path.join(os.sep, gb.PROJECT_DIR, gb.DATA_SUB_DIR, gb.DB_NAME + ".db")
 
     try:
         data_conn = sqlite3.connect(path)
@@ -162,13 +140,16 @@ def sqlite(ticker, start, end, path=None, params=None):
         print("Database Connection Error: ", err)
 
 
-def output_to_csv(prices):
+def output_to_csv(prices, name):
     """
     Thin wrapper method to output this dataframe to csv file
     :param prices: This is the dataframe itself
     :return:
     """
-    filename = '%s_%s' % (prices.name, datetime.date.today())
+
+    prefix = prices.name if hasattr(prices, name) else name
+
+    filename = '%s_%s' % (prefix, datetime.date.today())
     csv_dir = os.path.join(os.sep, gb.PROJECT_DIR, gb.OUTPUT_DIR, filename + ".csv")
     prices.to_csv(csv_dir)
 
@@ -196,19 +177,3 @@ def _normalize(dataframe):
 
     return dataframe
 
-
-def _slice(date, chains):
-    """
-    Return the option chain dataframe for the parameter date
-
-    :param date: the date to lookup option chains for
-    :return: the dataframe containing the option chain for the param date,
-             otherwise, return None
-    """
-
-    if date in chains:
-        option_qy = OptionQuery(chains[date])
-        chains[date] = option_qy
-        return chains[date]
-
-    return None

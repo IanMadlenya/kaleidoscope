@@ -14,7 +14,9 @@ else:
 
 DATA_SUB_DIR = "data"
 OUTPUT_DIR = "output"
-FILE_NAME = "securities"
+TEST_DIR = "tests"
+FIXTURES = 'fixtures'
+DB_NAME = "securities"
 
 
 class Period(Enum):
@@ -39,5 +41,5 @@ class Action(Enum):
 
 
 class OptionType(Enum):
-    CALL = 'c'
-    PUT = 'p'
+    CALL = ('c', 1)
+    PUT = ('p', -1)

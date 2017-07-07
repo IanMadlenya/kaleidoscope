@@ -4,7 +4,7 @@ from pandas.core.base import PandasObject
 
 from kaleidoscope.options import option_strategy
 from . import datas, globals, strategies, performance
-from .datas import get
+from .datas import get, output_to_csv
 from .option_series import OptionSeries
 from .options.option_strategies import construct
 

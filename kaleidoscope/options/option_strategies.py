@@ -1,7 +1,14 @@
 import pandas as pd
 
+from kaleidoscope.datas import opt_params
+from kaleidoscope.globals import OptionType
 from kaleidoscope.option_series import OptionSeries
 from kaleidoscope.options.option_query import OptionQuery
+
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+
+DEBUG = True
 
 
 class OptionStrategies(object):
@@ -9,18 +16,57 @@ class OptionStrategies(object):
     Static methods to define option strategies
     """
     @staticmethod
-    def generate_offsets(dataframe, shift_col, offsets):
+    def generate_offsets(chain, width, shift_col):
         """
-        :param dataframe: Dataframe to attach new offset columns to
-        :param shift_col: The column to create new shifted columns for
-        :param offsets: Array of offset values to generate offsetting columns for
+        :param chain: Dataframe to attach new offset columns to
+        :param width: width of the spreads
+        :param shift_col: the columns to apply shift
         :return: None
         """
-        offsets = offsets.sort_values(ascending=False)
+
+        if DEBUG:
+            chain.output_to_csv("offset_input_test")
+
+        # TODO: Thoroughly test this algorithm for widths with .25, .5, 10, 50, etc increments
+        # Calculate the distance of the strikes between each row width
+        chain['dist'] = chain['strike'].shift(width * -1) - chain['strike']
+
+        # Calculate the factor between the distance and the specified width
+        chain['factor'] = chain['dist'] / width
+
+        # Using the specified width and factor, calculate the offset for each row
+        chain['offset'] = -1 * width / chain['factor']
+        chain['offset'] = chain['offset'].round(0)
+
+        # remove the unnecessary columns
+        chain = chain.dropna().drop(['dist', 'factor'], axis=1)
+
+        # get the unique offset values
+        chain['offset'] = chain['offset'].astype(int)
+        offsets = chain['offset'].value_counts().index.sort_values(ascending=False)
+
+        # if there are more than one offset value, create a separate Dataframe for each offset amount
+        chains = []
 
         for offset in offsets:
-            col = shift_col + "_" + str(offset)
-            dataframe[col] = dataframe[shift_col].shift(offset)
+            chain_copy = chain.copy()
+            for col in shift_col:
+                new_col = col[0] + '_shifted'
+                chain_copy[new_col] = chain[col[0]].shift(offset)
+                chain_copy.dropna(inplace=True)
+
+            # check distance equals specified width, trim distances that do not match the width
+            chain_copy['dist_check'] = abs(chain_copy['strike_shifted'] - chain_copy['strike'])
+            chain_copy = chain_copy[chain_copy['dist_check'] == float(width)]
+            chain_copy.drop(['dist_check', 'offset'], axis=1, inplace=True)
+            chains.append(chain_copy)
+
+        concat_df = pd.concat(chains, ignore_index=True).sort_values('symbol', axis=0)
+
+        if DEBUG:
+            concat_df.output_to_csv("offset_results_test")
+
+        return concat_df
 
     @staticmethod
     def moneyness(option_type, underlying, h_strike, l_strike):
@@ -42,95 +88,52 @@ class OptionStrategies(object):
             return "ATM"
 
     @staticmethod
-    def vertical_spread(chain, width):
+    def vertical_spread(chain, width, option_type):
         """
-
-        :param chain: Dataframe to manipulate and base vertical spreads on.
-        :param width: Distance in value between the strikes to construct vertical spreads with.
-        :return: A new dataframe containing all vertical spreads created from dataframe
-
         The vertical spread is an option spread strategy whereby the
         option trader purchases a certain number of options and simultaneously
         sell an equal number of options of the same class, same underlying security,
         same expiration date, but at a different strike price.
+
+        :param chain: Filtered Dataframe to vertical spreads with.
+        :param width: Distance in value between the strikes to construct vertical spreads with.
+        :param option_type: The option type for this spread
+        :return: A new dataframe containing all vertical spreads created from dataframe
+
         """
-        spread_chain = chain.copy()
-
-        # TODO: Thoroughly test this algorithm for widths with .25, .5, 10, 50, etc increments
-        # Calculate the distance of the strikes between each row
-        spread_chain['dist'] = spread_chain['strike'].shift(width * -1) - spread_chain['strike']
-
-        # Calculate the factor between the distance and the specified width
-        spread_chain['factor'] = spread_chain['dist'] / width
-
-        # Using the specified width and factor, calculate the offset for each row
-        spread_chain['offset'] = -1 * width / spread_chain['factor']
-        spread_chain['offset'] = spread_chain['offset'].round(0)
-
-        # Clean up the data
-        spread_chain = spread_chain.dropna()
-        spread_chain['offset'] = spread_chain['offset'].astype(int)
-        spread_chain = spread_chain.drop(['dist', 'factor'], axis=1)
-
-        # TODO: remove hard code below, should generate offset for each column
-        # generate the offsetting columns for each offset value
-        offsets = spread_chain['offset'].value_counts().index
-        OptionStrategies.generate_offsets(spread_chain, 'strike', offsets)
-        OptionStrategies.generate_offsets(spread_chain, 'ask', offsets)
-        OptionStrategies.generate_offsets(spread_chain, 'bid', offsets)
-        OptionStrategies.generate_offsets(spread_chain, 'trade_volume', offsets)
-        OptionStrategies.generate_offsets(spread_chain, 'symbol', offsets)
+        shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
+        sc = OptionStrategies.generate_offsets(chain.copy(), width, shift_col)
 
         # calculate the spread's bid and ask prices
-        spread_chain['spread_bid'] = spread_chain.apply(lambda row: row['bid'] -
-                                                        row['ask' + '_' +
-                                                        str(row['offset'])],
-                                                        axis=1
-                                                        )
+        for col in shift_col:
+            # handle bid ask special case
+            col_name = col[0]
+            func = col[1]
+            if col_name == 'bid':
+                sc['spread_' + col_name] = func(sc[col_name], sc['ask_shifted'])
+            elif col_name == 'ask':
+                sc['spread_' + col_name] = func(sc[col_name], sc['bid_shifted'])
+            else:
+                if func is not None:
+                    sc['spread_' + col_name] = func(sc[col_name], sc[col_name + '_shifted'])
 
-        spread_chain['spread_ask'] = spread_chain.apply(lambda row: row['ask'] -
-                                                        row['bid' + '_' +
-                                                        str(row['offset'])],
-                                                        axis=1
-                                                        )
+        sc['spread_mark'] = (sc['spread_bid'] + sc['spread_ask']) / 2
 
-        spread_chain['spread_mark'] = spread_chain.apply(lambda row: (row['spread_bid'] +
-                                                         row['spread_ask']) / 2,
-                                                         axis=1
-                                                         )
+        if option_type == OptionType.CALL:
+            sc['spread_symbol'] = sc['symbol'] + "-." + sc['symbol_shifted']
+        elif option_type == OptionType.PUT:
+            sc['spread_symbol'] = sc['symbol_shifted'] + "-." + sc['symbol']
 
-        # sum the trade volume of the two strikes
-        spread_chain['spread_volume'] = spread_chain.apply(lambda row: row['trade_volume'] +
-                                                           row['trade_volume' + '_' +
-                                                           str(row['offset'])],
-                                                           axis=1
-                                                           )
-
-        # sum the trade volume of the two strikes
-        spread_chain['spread_symbol'] = spread_chain.apply(lambda row: "." + row['symbol'] + "-." +
-                                                                       str(row['symbol' + '_' + str(row['offset'])]),
-                                                           axis=1
-                                                           )
-
-        spread_chain.rename(columns={'strike': 'lower_strike'}, inplace=True)
-
-        # get the higher strike of the spread
-        spread_chain['higher_strike'] = spread_chain.apply(lambda row: row['strike' + '_' +
-                                                                           str(row['offset'])],
-                                                           axis=1
-                                                           )
+        sc.rename(columns={'strike': 'lower_strike'}, inplace=True)
+        sc.rename(columns={'strike_shifted': 'higher_strike'}, inplace=True)
 
         # clean up the results, drop NaN
-        spread_chain = spread_chain.dropna()
+        sc = sc.dropna()
 
-        # check distance equals specified width, trim distances that do not match the width
-        spread_chain['dist_check'] = spread_chain['higher_strike'] - spread_chain['lower_strike']
-        spread_chain = spread_chain[spread_chain['dist_check'] == float(width)]
+        sc = sc[['spread_symbol', 'quote_date', 'expiration', 'spread_mark',
+                 'underlying_price', 'lower_strike', 'higher_strike']]
 
-        spread_chain = spread_chain[['spread_symbol', 'quote_date', 'expiration', 'spread_mark',
-                                     'underlying_price', 'lower_strike', 'higher_strike']]
-
-        return spread_chain
+        return sc
 
     @staticmethod
     def iron_condor(chain, call_spread_width, put_spread_width):

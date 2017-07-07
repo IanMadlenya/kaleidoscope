@@ -28,9 +28,12 @@ def vertical_spreads(quote_date, option_chains, **kwargs):
               )
 
     # Batch create vertical call spreads on all strikes
-    vertical_spreads = OptionStrategies.vertical_spread(chains, width=params['width'])
+    spreads = OptionStrategies.vertical_spread(chains,
+                                               width=params['width'],
+                                               option_type=params['option_type']
+                                               )
 
-    return vertical_spreads
+    return spreads
 
 
 def iron_condors(quote_date, option_chains, **kwargs):
@@ -56,12 +59,12 @@ def iron_condors(quote_date, option_chains, **kwargs):
     chains = (option_chains.lte('expiration', params['DTE']).fetch())
 
     # Batch create vertical call spreads on all strikes
-    iron_condors = OptionStrategies.iron_condor(chains,
-                                                call_spread_width=params['call_spread_width'],
-                                                put_spread_width=params['put_spread_width']
-                                                )
+    spreads = OptionStrategies.iron_condor(chains,
+                                           call_spread_width=params['call_spread_width'],
+                                           put_spread_width=params['put_spread_width']
+                                           )
 
-    return iron_condors
+    return spreads
 
 
 def custom(quote_date, option_chains, **kwargs):

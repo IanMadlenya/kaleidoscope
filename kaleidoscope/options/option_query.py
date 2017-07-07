@@ -60,7 +60,7 @@ class OptionQuery(object):
 
         if isinstance(option_type, OptionType):
             chain = self.option_chain
-            chain = chain[chain.option_type.str.contains(option_type.value, case=False)]
+            chain = chain[chain.option_type.str.contains(option_type.value[0], case=False)]
             return OptionQuery(chain)
         else:
             raise ValueError("option_type must be of type OptionType")

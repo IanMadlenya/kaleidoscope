@@ -25,7 +25,7 @@ pip-log.txt
 .coverage
 
 # IDE meta files
-.vscode
+.vscode
 .idea
 
 # project specific

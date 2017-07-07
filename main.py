@@ -15,10 +15,10 @@ def start():
     strategy = kd.option_strategy.vertical_spreads
 
     # construct put vertical spreads (returns OptionSeries object)
-    # put_spreads = kd.construct(kd.option_strategy.vertical_spreads, data, option_type=OptionType.PUT)
+    put_spreads = kd.construct(kd.option_strategy.vertical_spreads, data, option_type=OptionType.PUT)
 
     # construct call vertical spreads (returns OptionSeries object)
-    call_spreads = kd.construct(strategy, data, option_type=OptionType.CALL)
+    # call_spreads = kd.construct(strategy, data, option_type=OptionType.CALL)
 
     # construct custom spreads
     # custom_spread = kd.construct(kd.option_strategy.custom, data)

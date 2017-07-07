@@ -8,7 +8,7 @@ from kaleidoscope.options.option_query import OptionQuery
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
 
-DEBUG = True
+DEBUG = False
 
 
 class OptionStrategies(object):
@@ -16,20 +16,21 @@ class OptionStrategies(object):
     Static methods to define option strategies
     """
     @staticmethod
-    def generate_offsets(chain, width, shift_col):
+    def generate_offsets(chain, width, shift_col, option_type):
         """
         :param chain: Dataframe to attach new offset columns to
         :param width: width of the spreads
         :param shift_col: the columns to apply shift
+        :param option_type: the option type to construct spreads with
         :return: None
         """
 
         if DEBUG:
-            chain.output_to_csv("offset_input_test")
+            chain.output_to_csv("offset_input_test_puts")
 
         # TODO: Thoroughly test this algorithm for widths with .25, .5, 10, 50, etc increments
         # Calculate the distance of the strikes between each row width
-        chain['dist'] = chain['strike'].shift(width * -1) - chain['strike']
+        chain['dist'] = chain['strike'].shift(width * -1 * option_type.value[1]) - chain['strike']
 
         # Calculate the factor between the distance and the specified width
         chain['factor'] = chain['dist'] / width
@@ -39,11 +40,11 @@ class OptionStrategies(object):
         chain['offset'] = chain['offset'].round(0)
 
         # remove the unnecessary columns
-        chain = chain.dropna().drop(['dist', 'factor'], axis=1)
+        chain = chain.drop(['dist', 'factor'], axis=1)
 
         # get the unique offset values
-        chain['offset'] = chain['offset'].astype(int)
-        offsets = chain['offset'].value_counts().index.sort_values(ascending=False)
+        # chain['offset'] = chain['offset'].astype(int)
+        offsets = chain['offset'].value_counts(dropna=True).index.sort_values(ascending=False)
 
         # if there are more than one offset value, create a separate Dataframe for each offset amount
         chains = []
@@ -52,7 +53,7 @@ class OptionStrategies(object):
             chain_copy = chain.copy()
             for col in shift_col:
                 new_col = col[0] + '_shifted'
-                chain_copy[new_col] = chain[col[0]].shift(offset)
+                chain_copy[new_col] = chain[col[0]].shift(int(offset))
                 chain_copy.dropna(inplace=True)
 
             # check distance equals specified width, trim distances that do not match the width
@@ -61,10 +62,10 @@ class OptionStrategies(object):
             chain_copy.drop(['dist_check', 'offset'], axis=1, inplace=True)
             chains.append(chain_copy)
 
-        concat_df = pd.concat(chains, ignore_index=True).sort_values('symbol', axis=0)
+        concat_df = pd.concat(chains, ignore_index=True).sort_values('symbol', axis=0).reset_index(drop=True)
 
         if DEBUG:
-            concat_df.output_to_csv("offset_results_test")
+            concat_df.output_to_csv("offset_results_test_puts")
 
         return concat_df
 
@@ -101,8 +102,12 @@ class OptionStrategies(object):
         :return: A new dataframe containing all vertical spreads created from dataframe
 
         """
+
+        # check that the width is allowed based
+        strikes = chain['strike']
+
         shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
-        sc = OptionStrategies.generate_offsets(chain.copy(), width, shift_col)
+        sc = OptionStrategies.generate_offsets(chain.copy(), width, shift_col, option_type)
 
         # calculate the spread's bid and ask prices
         for col in shift_col:

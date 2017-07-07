@@ -1,3 +1,6 @@
+import math
+
+import numpy as np
 import pandas as pd
 
 from kaleidoscope.datas import opt_params
@@ -8,7 +11,7 @@ from kaleidoscope.options.option_query import OptionQuery
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
 
-DEBUG = False
+DEBUG = True
 
 
 class OptionStrategies(object):
@@ -26,26 +29,25 @@ class OptionStrategies(object):
         """
 
         if DEBUG:
-            chain.output_to_csv("offset_input_test_puts")
+            chain.output_to_csv("offset_input_test_w_%s_%s" % (width, option_type.value[0].upper()))
 
         # TODO: Thoroughly test this algorithm for widths with .25, .5, 10, 50, etc increments
         # Calculate the distance of the strikes between each row width
-        chain['dist'] = chain['strike'].shift(width * -1 * option_type.value[1]) - chain['strike']
+        chain['dist'] = chain['strike'].shift(math.ceil(width) * -1 * option_type.value[1]) - chain['strike']
 
         # Calculate the factor between the distance and the specified width
         chain['factor'] = chain['dist'] / width
 
         # Using the specified width and factor, calculate the offset for each row
         chain['offset'] = -1 * width / chain['factor']
-        chain['offset'] = chain['offset'].round(0)
+        chain['offset'] = chain['offset'].fillna(0)
+        chain['offset'] = np.ceil(chain['offset']) if option_type == OptionType.PUT else np.floor(chain['offset'])
 
         # remove the unnecessary columns
         chain = chain.drop(['dist', 'factor'], axis=1)
 
         # get the unique offset values
-        # chain['offset'] = chain['offset'].astype(int)
         offsets = chain['offset'].value_counts(dropna=True).index.sort_values(ascending=False)
-
         # if there are more than one offset value, create a separate Dataframe for each offset amount
         chains = []
 
@@ -65,7 +67,7 @@ class OptionStrategies(object):
         concat_df = pd.concat(chains, ignore_index=True).sort_values('symbol', axis=0).reset_index(drop=True)
 
         if DEBUG:
-            concat_df.output_to_csv("offset_results_test_puts")
+            concat_df.output_to_csv("offset_results_test_w_%s_%s" % (width, option_type.value[0].upper()))
 
         return concat_df
 

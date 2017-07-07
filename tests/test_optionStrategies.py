@@ -13,6 +13,7 @@ from kaleidoscope.options.option_strategies import OptionStrategies
 
 class TestOptionStrategies(TestCase):
     def setUp(self):
+        # Retrieve all options with DTE for 2016-02-19 for testing
         self.data_2016_02_19 = kd.get('VXX', start='2016-02-19', end='2016-02-19')
 
     def test_generate_offsets(self):

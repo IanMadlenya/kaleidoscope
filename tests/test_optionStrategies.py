@@ -15,7 +15,7 @@ class TestOptionStrategies(TestCase):
     def setUp(self):
 
         self.start = '2016-02-19'
-        self.end = '2016-02-26'
+        self.end = '2016-02-19'
 
         self.shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
 

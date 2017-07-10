@@ -20,7 +20,7 @@ class OptionStrategies(object):
     shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
 
     @staticmethod
-    def vertical_spread(chain, width, option_type):
+    def vertical_spread(chain, **params):
         """
         The vertical spread is an option spread strategy whereby the
         option trader purchases a certain number of options and simultaneously
@@ -31,22 +31,24 @@ class OptionStrategies(object):
         :param width: Distance in value between the strikes to construct vertical spreads with.
         :param option_type: The option type for this spread
         :return: A new dataframe containing all vertical spreads created from dataframe
-
         """
-        chains = chain.copy()
+
+        if 'option_type' not in params or 'width' not in params:
+            raise ValueError("Must provide option_type and width parameters for vertical spreads")
+
+        chains = OptionQuery(chain).option_type(params['option_type'])
+
+        if 'DTE' in params:
+            chains = chains.lte('expiration', params['DTE'])
 
         # shift only the strikes since this is a vertical spread
-        chains['strike_key'] = chains['strike'] + (width * option_type.value[1])
+        chains = chains.fetch()
+        chains['strike_key'] = chains['strike'] + (params['width'] * params['option_type'].value[1])
+        left_keys = ['quote_date', 'expiration', 'option_type', 'strike_key']
+        right_keys = ['quote_date', 'expiration', 'option_type', 'strike']
 
-        chains = chains.merge(chains,
-                              left_on=['quote_date', 'expiration', 'strike_key'],
-                              right_on=['quote_date', 'expiration', 'strike'],
-                              suffixes=('', '_shifted')
-                              )
+        chains = chains.merge(chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
 
-        chains = chains.drop(['strike_key', 'strike_key_shifted',
-                              'option_type_shifted', 'underlying_price_shifted'], axis=1)
-        
         # calculate the spread's bid and ask prices
         for col in OptionStrategies.shift_col:
             # handle bid ask special case
@@ -62,11 +64,8 @@ class OptionStrategies(object):
 
         chains['spread_mark'] = (chains['spread_bid'] + chains['spread_ask']) / 2
         chains['spread_symbol'] = chains['symbol'] + "-." + chains['symbol_shifted']
-
-        chains = chains[['spread_symbol', 'quote_date', 'expiration', 'spread_mark',
-                         'underlying_price', 'strike', 'strike_shifted']]
-
-        return chains
+        return chains[['spread_symbol', 'quote_date', 'expiration', 'spread_mark',
+                       'underlying_price', 'strike', 'strike_shifted']]
 
     @staticmethod
     def iron_condor(chain, call_spread_width, put_spread_width):
@@ -88,22 +87,8 @@ def construct(strategy, chains, **kwargs):
     :return:
     """
 
-    params = {
-        'width': 2,
-        'DTE': Period.SEVEN_WEEKS,
-        'option_type': OptionType.CALL
-    }
-
-    params.update(kwargs)
-
-    # pre-filter the options to create the option spread with
-    chains = (OptionQuery(chains).lte('expiration', params['DTE'])
-              .option_type(params['option_type'])
-              .fetch()
-              )
-
     # Batch create vertical call spreads on all strikes
-    spread_chains = strategy(chains, width=params['width'], option_type=params['option_type'])
+    spread_chains = strategy(chains, **kwargs)
 
     # assign the name of this concatenated dataframe to be the name of the strategy function
     spread_chains.name = strategy.__name__

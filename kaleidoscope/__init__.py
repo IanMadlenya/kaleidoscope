@@ -2,10 +2,9 @@
 
 from pandas.core.base import PandasObject
 
-from kaleidoscope.options import option_strategy
-from . import datas, globals, strategies, performance
+from kaleidoscope.options.option_strategies import OptionStrategies
+from kaleidoscope.globals import Period, OptionType
 from .datas import get, output_to_csv
-from .option_series import OptionSeries
 from .options.option_strategies import construct
 
 PandasObject.output_to_csv = datas.output_to_csv

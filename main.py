@@ -1,7 +1,7 @@
 import time
 
 import kaleidoscope as kd
-from kaleidoscope.globals import OptionType
+from kaleidoscope.options.option_strategies import OptionStrategies
 
 
 def start():
@@ -12,13 +12,15 @@ def start():
     # VXX Call Credit Spreads vs. Put Debit Spreads ==========================================
 
     data = kd.get('VXX', start='2016-02-19', end='2016-02-19')
-    strategy = kd.option_strategy.vertical_spreads
 
     # construct put vertical spreads (returns OptionSeries object)
-    put_spreads = kd.construct(kd.option_strategy.vertical_spreads, data, option_type=OptionType.PUT)
+    put_spreads = kd.construct(OptionStrategies.vertical_spread, data, option_type=kd.OptionType.PUT)
+
+    # put_spreads.plot('2016-02-19')
 
     # construct call vertical spreads (returns OptionSeries object)
-    # call_spreads = kd.construct(strategy, data, option_type=OptionType.CALL)
+    call_spreads = kd.construct(OptionStrategies.vertical_spread, data, option_type=kd.OptionType.CALL)
+    # call_spreads.plot('2016-02-19')
 
     # construct custom spreads
     # custom_spread = kd.construct(kd.option_strategy.custom, data)

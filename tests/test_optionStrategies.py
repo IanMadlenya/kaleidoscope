@@ -1,145 +1,130 @@
-import inspect
-import os
 from unittest import TestCase
 
 import pandas as pd
+import numpy as np
 from pandas.util.testing import assert_frame_equal
 
 import kaleidoscope as kd
 from kaleidoscope.datas import opt_params
-from kaleidoscope.globals import OptionType, Period, PROJECT_DIR, TEST_DIR, FIXTURES
+from kaleidoscope.globals import OptionType, Period
 from kaleidoscope.options.option_query import OptionQuery
 from kaleidoscope.options.option_strategies import OptionStrategies
 
 
 class TestOptionStrategies(TestCase):
     def setUp(self):
-        # Retrieve all options with DTE for 2016-02-19 for testing
-        self.data_2016_02_19 = kd.get('VXX', start='2016-02-19', end='2016-02-19')
 
-    def test_generate_offsets_w_2_C_2016_02_19(self):
+        self.start = '2016-02-19'
+        self.end = '2016-02-26'
 
-        # TEST quote_date of 2016-02-19 =====================================================
-        # here we are testing the offsets generated for the last trading day for
-        # options with DTE of 2016-02-19. This test case tests for regular and
-        # irregular strike intervals
+        self.shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
 
-        test_width = 2
-        test_quote_date_1 = '2016-02-19'
-        test_fixture_file = inspect.stack()[0][3][5:] + '_fixture.csv'
-        path = os.path.join(os.sep, PROJECT_DIR, TEST_DIR, FIXTURES, test_fixture_file)
+        # Retrieve all options with specified DTE and expiration dates
+        self.data = kd.get('VXX', start=self.start, end=self.end)
+        self.dates = sorted(self.data.keys())
 
-        try:
-            test_fixture = pd.read_csv(path, index_col=0, parse_dates=['quote_date', 'expiration'])
-        except:
-            raise IOError('Cannot open fixture file')
+        self.output_list = []
+        self.test_chain_list = {}
 
-        option_qy = OptionQuery(self.data_2016_02_19[test_quote_date_1])
-        chains = (option_qy.lte('expiration', Period.SEVEN_WEEKS)
-                  .option_type(OptionType.CALL)
-                  .fetch()
-                  )
+        for quote_date in self.dates:
+            option_qy = OptionQuery(self.data[quote_date])
+            chains = option_qy.lte('expiration', Period.SEVEN_WEEKS).fetch()
+            self.test_chain_list[quote_date] = chains
+            self.output_list.append(chains)
 
-        shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
-        sc = OptionStrategies.generate_offsets(chains, test_width, shift_col, OptionType.CALL)
-        assert_frame_equal(sc, test_fixture,
-                           check_dtype=False,
-                           check_exact=True,
-                           check_datetimelike_compat=True
-                           )
+        # output a list of inputs for trace
+        test_fixture = pd.concat(self.output_list, ignore_index=True)
+        test_fixture.output_to_csv("generate_offsets_inputs_%s" % self.end)
 
-    def test_generate_offsets_w_2_P_2016_02_19(self):
+    def test_generate_offsets(self):
+        """
+        This test method will create a test case for each possible spread widths within a set of strikes
+        for each quote date under the specified expiry cycles.
+        :return:
+        """
 
-        # TEST quote_date of 2016-02-19 =====================================================
-        # here we are testing the offsets generated for the last trading day for
-        # options with DTE of 2016-02-19. This test case tests for regular and
-        # irregular strike intervals
+        # hold all the intervals tested to avoid duplicating tests
+        all_widths = []
 
-        test_width = 2
-        test_quote_date_1 = '2016-02-19'
-        test_fixture_file = inspect.stack()[0][3][5:] + '_fixture.csv'
-        path = os.path.join(os.sep, PROJECT_DIR, TEST_DIR, FIXTURES, test_fixture_file)
+        for quote_date in self.test_chain_list:
+            with self.subTest(quote_date=quote_date):
+                # filter for current quote_date's data and option type
+                option_qy = OptionQuery(self.test_chain_list[quote_date])
+                call_chains = option_qy.option_type(OptionType.CALL).fetch()
+                put_chains = option_qy.option_type(OptionType.PUT).fetch()
 
-        try:
-            test_fixture = pd.read_csv(path, index_col=0, parse_dates=['quote_date', 'expiration'])
-        except:
-            raise IOError('Cannot open fixture file')
+                # get all unique strikes for the date's option chains
+                call_strikes = call_chains['strike'].unique()
+                put_strikes = put_chains['strike'].unique()
 
-        option_qy = OptionQuery(self.data_2016_02_19[test_quote_date_1])
-        chains = (option_qy.lte('expiration', Period.SEVEN_WEEKS)
-                  .option_type(OptionType.PUT)
-                  .fetch()
-                  )
+                if not np.array_equal(call_strikes, put_strikes):
+                    raise ValueError('Call and put strikes not equal. Please review option chain data.')
+                else:
+                    all_strikes = call_strikes
 
-        shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
-        sc = OptionStrategies.generate_offsets(chains, test_width, shift_col, OptionType.PUT)
-        assert_frame_equal(sc, test_fixture,
-                           check_dtype=False,
-                           check_exact=True,
-                           check_datetimelike_compat=True
-                           )
+                # Get all interval values between each strike
+                num_of_strikes = len(all_strikes)
+                widths = []
 
-    def test_generate_offsets_w_1_P_2016_02_19(self):
+                # calculate all possible widths for this set of strikes
+                for i in range(0, num_of_strikes):
+                    for j in range(i + 1, num_of_strikes):
+                        interval = all_strikes[j] - all_strikes[i]
+                        if interval not in all_widths:
+                            widths.append(interval)
+                            all_widths.append(interval)
 
-        # TEST quote_date of 2016-02-19 =====================================================
-        # here we are testing the offsets generated for the last trading day for
-        # options with DTE of 2016-02-19. This test case tests for regular and
-        # irregular strike intervals
+                for width in widths:
+                    with self.subTest(width=width):
+                        # for each quote date and width, generate a result fixture
+                        expected_offsets_call = self.generate_fixtures(call_chains.copy(), OptionType.CALL, width)
+                        expected_offsets_put = self.generate_fixtures(put_chains.copy(), OptionType.PUT, width)
 
-        test_width = 1
-        test_quote_date_1 = '2016-02-19'
-        test_fixture_file = inspect.stack()[0][3][5:] + '_fixture.csv'
-        path = os.path.join(os.sep, PROJECT_DIR, TEST_DIR, FIXTURES, test_fixture_file)
+                        # test each generated fixtures with dynamically created test case
+                        actual_offsets_call = OptionStrategies.generate_offsets(call_chains.copy(),
+                                                                                width,
+                                                                                OptionType.CALL)
 
-        try:
-            test_fixture = pd.read_csv(path, index_col=0, parse_dates=['quote_date', 'expiration'])
-        except:
-            raise IOError('Cannot open fixture file')
+                        actual_offsets_put = OptionStrategies.generate_offsets(put_chains.copy(),
+                                                                               width,
+                                                                               OptionType.PUT)
 
-        option_qy = OptionQuery(self.data_2016_02_19[test_quote_date_1])
-        chains = (option_qy.lte('expiration', Period.SEVEN_WEEKS)
-                  .option_type(OptionType.PUT)
-                  .fetch()
-                  )
+                        try:
+                            assert_frame_equal(actual_offsets_call, expected_offsets_call,
+                                               check_dtype=False,
+                                               check_exact=True,
+                                               check_datetimelike_compat=True
+                                               )
+                        except AssertionError:
+                            actual_offsets_call.output_to_csv("test_generate_offset_actual_%s_C" % width)
+                            expected_offsets_call.output_to_csv("test_generate_offset_expected_%s_C" % width)
+                            raise
 
-        shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
-        sc = OptionStrategies.generate_offsets(chains, test_width, shift_col, OptionType.PUT)
-        assert_frame_equal(sc, test_fixture,
-                           check_dtype=False,
-                           check_exact=True,
-                           check_datetimelike_compat=True
-                           )
+                        try:
+                            assert_frame_equal(actual_offsets_put, expected_offsets_put,
+                                               check_dtype=False,
+                                               check_exact=True,
+                                               check_datetimelike_compat=True
+                                               )
+                        except AssertionError:
+                            actual_offsets_call.output_to_csv("test_generate_offset_actual_%s_P" % width)
+                            expected_offsets_call.output_to_csv("test_generate_offset_expected_%s_P" % width)
+                            raise
 
-    def test_generate_offsets_w_2_5_P_2016_02_19(self):
+    def generate_fixtures(self, chains, option_type, width):
+        """
+        Return a DataFrame object representing the expected results of the generate_offset function
+        for the specified width and option type for a set of option chains.
 
-        # TEST quote_date of 2016-02-19 =====================================================
-        # here we are testing the offsets generated for the last trading day for
-        # options with DTE of 2016-02-19. This test case tests for regular and
-        # irregular strike intervals
+        :param chains:
+        :param option_type:
+        :param width:
+        :return:
+        """
+        chains['strike_key'] = chains['strike'] + (width * option_type.value[1])
 
-        test_width = 2.5
-        test_quote_date_1 = '2016-02-19'
-        test_fixture_file = 'generate_offsets_w_2_5_P_2016_02_19_fixture.csv'
-        path = os.path.join(os.sep, PROJECT_DIR, TEST_DIR, FIXTURES, test_fixture_file)
+        chains = chains.merge(chains, left_on='strike_key', right_on='strike', suffixes=('', '_shifted'))
+        chains = chains.drop(['strike_key', 'strike_key_shifted', 'quote_date_shifted', 'expiration_shifted',
+                              'option_type_shifted', 'underlying_price_shifted'], axis=1)
 
-        try:
-            test_fixture = pd.read_csv(path, index_col=0, parse_dates=['quote_date', 'expiration'])
-        except:
-            raise IOError('Cannot open fixture file')
-
-        option_qy = OptionQuery(self.data_2016_02_19[test_quote_date_1])
-        chains = (option_qy.lte('expiration', Period.SEVEN_WEEKS)
-                  .option_type(OptionType.PUT)
-                  .fetch()
-                  )
-
-        shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
-        sc = OptionStrategies.generate_offsets(chains, test_width, shift_col, OptionType.PUT)
-        assert_frame_equal(sc, test_fixture,
-                           check_dtype=False,
-                           check_exact=True,
-                           check_datetimelike_compat=True
-                           )
-
-    def test_generate_offsets_w_0_5_P_2016_02_19(self):
-        pass
+        return chains

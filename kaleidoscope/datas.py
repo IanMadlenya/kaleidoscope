@@ -1,7 +1,3 @@
-"""
-module doc string
-"""
-
 import datetime
 import operator as op
 import os
@@ -47,50 +43,34 @@ opt_params = (
 )
 
 
-def get(ticker, start, end, option_strategy=None,
-        filter_params=None, provider=None, path=None,
-        include_splits=False, dropna=True, option_type=None):
+def get(ticker, start, end,
+        provider=None, path=None,
+        include_splits=False, option_type=None):
     """
     Helper function for retrieving data as a DataFrame.
 
     :param ticker: the symbol to download
     :param start: expiration start date of downloaded data
     :param end: expiration end date of downloaded data
-    :param option_strategy: the option strategy to construct with the data source
-    :param filter_params: the parameters to pass into the option strategy on initialization
     :param provider: The data source to use for downloading data, reference to function
                      Defaults to sqlite database
     :param path: Path to the data source
     :param include_splits: Should data exclude options created from the underlying's stock splits
-    :param dropna: drop NaN from resulting strategy prices
     :param option_type: If None, or not passed in, will retrieve both calls and puts of option chain
     :return: Dataframe containing all option chains as filtered by algo for the specified date range
     """
 
-    provider_kwargs = {}
-
-    # default to sqlite provider if none specified
     if provider is None:
         provider = sqlite
-
-    # TODO: move this into sqlite function
-    # exclude option chains created from the underlying's stock split
-    if not include_splits:
-        provider_kwargs['root'] = ticker
-
-    if option_type == 'c':
-        provider_kwargs['option_type'] = 'c'
-
-    if option_type == 'p':
-        provider_kwargs['option_type'] = 'p'
 
     # TODO: check that the query returned data
     # Providers will return an dictionary where quote_dates is key,
     # and DataFrames of option chains for that date as value
-    return provider(ticker, start, end, path, provider_kwargs)
+    return provider(ticker, start, end, path, include_splits, option_type)
 
 
-def sqlite(ticker, start, end, path=None, params=None):
+def sqlite(ticker, start, end, path=None,
+           include_splits=False, option_type=None):
     """
     Data provider wrapper around pandas read_sql_query for sqlite database.
 
@@ -98,12 +78,23 @@ def sqlite(ticker, start, end, path=None, params=None):
     :param path: full path to data file
     :param start: start date to retrieve data from
     :param end: end date to retrieve data to
-    :param params: specific params used in query to retrieve data
     :return: Dictionary with quote_date as key, dataframe containinginin option chains as value
     """
+    # TODO: allow for various start and end date configurations
+
+    params = {}
+
+    # exclude option chains created from the underlying's stock split
+    if not include_splits:
+        params['root'] = ticker
+
+    if option_type == 'c':
+        params['option_type'] = 'c'
+
+    if option_type == 'p':
+        params['option_type'] = 'p'
 
     if path is None:
-        # TODO: allow for various start and end date configurations
         # use default path if no path given
         path = os.path.join(os.sep, gb.PROJECT_DIR, gb.DATA_SUB_DIR, gb.DB_NAME + ".db")
 
@@ -127,14 +118,7 @@ def sqlite(ticker, start, end, path=None, params=None):
 
         # normalize dataframe columns
         data = _normalize(data)
-        unique_quote_dates = data['quote_date'].unique()
-        option_chains = {elem: pd.DataFrame for elem in unique_quote_dates}
-
-        # populate the dictionary
-        for key in option_chains.keys():
-            option_chains[key] = data[:][data["quote_date"] == key]
-
-        return option_chains
+        return data
 
     except IOError as err:
         print("Database Connection Error: ", err)
@@ -147,9 +131,7 @@ def output_to_csv(prices, name):
     :return:
     """
 
-    prefix = prices.name if hasattr(prices, name) else name
-
-    filename = '%s_%s' % (prefix, datetime.date.today())
+    filename = prices.name if hasattr(prices, name) else name
     csv_dir = os.path.join(os.sep, gb.PROJECT_DIR, gb.OUTPUT_DIR, filename + ".csv")
     prices.to_csv(csv_dir)
 

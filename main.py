@@ -1,4 +1,5 @@
 import time
+
 import kaleidoscope as kd
 
 
@@ -14,7 +15,7 @@ def start():
     call_spreads = kd.construct(kd.OptionStrategies.vertical_spread,
                                 data,
                                 option_type=kd.OptionType.CALL,
-                                DTE=kd.Period.THREE_WEEKS,
+                                DTE=kd.Period.SEVEN_WEEKS,
                                 width=2
                                 )
 

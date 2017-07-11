@@ -1,12 +1,9 @@
-import math
-
-import numpy as np
 import pandas as pd
 
-from kaleidoscope.datas import opt_params
-from kaleidoscope.option_series import OptionSeries
+from kaleidoscope.data import opt_params
+from kaleidoscope.globals import OptionType
 from kaleidoscope.options.option_query import OptionQuery
-from kaleidoscope.globals import Period, OptionType
+from kaleidoscope.options.option_series import OptionSeries
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
@@ -68,8 +65,12 @@ class OptionStrategies(object):
                        'underlying_price', 'strike', 'strike_shifted']]
 
     @staticmethod
-    def iron_condor(chain, call_spread_width, put_spread_width):
-        pass
+    def iron_condor(chain, width, call_spread_width, put_spread_width):
+
+        call_side = OptionStrategies.vertical_spread(chain, width=call_spread_width, option_type=OptionType.CALL)
+        put_side = OptionStrategies.vertical_spread(chain, width=put_spread_width, option_type=OptionType.PUT)
+
+        
 
     @staticmethod
     def custom(chain, **kwargs):

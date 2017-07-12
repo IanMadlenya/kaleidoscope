@@ -6,13 +6,15 @@ The following strategies are currently supported:
 * Single Calls/Puts
 * Vertical Spreads
 * Iron Condors (Iron Butterflies)
-* Covered Calls
+* Covered Stock
 
 Planned Support:
 * Combos (Synthetics/Collars)
 * Diagonal Spreads
 * Calendar Spreads
 * Custom Spreads
+* Strangles
+* Straddles
 
 ## Installation
 

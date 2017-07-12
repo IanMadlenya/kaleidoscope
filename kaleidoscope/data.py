@@ -16,7 +16,7 @@ import kaleidoscope.globals as gb
 
 opt_params = (
     ('symbol', 0, 1, None),
-    ('underlying_symbol', -1, 0, None),
+    ('underlying_symbol', 1, 0, None),
     ('quote_date', 2, 0, None),
     ('root', -1, 0, None),
     ('expiration', 4, 0, None),
@@ -77,7 +77,9 @@ def sqlite(ticker, start, end, path=None,
     :param path: full path to data file
     :param start: start date to retrieve data from
     :param end: end date to retrieve data to
-    :return: Dictionary with quote_date as key, dataframe containinginin option chains as value
+    :param include_splits: Should data exclude options created from the underlying's stock splits
+    :param option_type: If None, or not passed in, will retrieve both calls and puts of option chain
+    :return: dataframe containing option chains
     """
     # TODO: allow for various start and end date configurations
 

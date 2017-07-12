@@ -98,7 +98,7 @@ class OptionStrategies(object):
         :param width: Width between the middle strikes.
         :param c_width: Width of the call spreads
         :param p_width: Width of the put spreads
-        :return:
+        :return: A new dataframe containing all iron condors created from dataframe
         """
 
         call_side = OptionStrategies.vertical_spread(chain, width=params['c_width'], option_type=OptionType.CALL)
@@ -117,19 +117,34 @@ class OptionStrategies(object):
                        'underlying_price_c', 'strike_c', 'strike_shifted_c', 'strike_p', 'strike_shifted_p']]
 
     @staticmethod
-    def covered_call(chain, **params):
+    def covered_stock(chain, **params):
+        """
+        A covered call is an options strategy whereby an investor holds a long position
+        n an asset and writes (sells) call options on that same asset in an attempt to
+        generate increased income from the asset.
 
-        chains = OptionQuery(chain).option_type(OptionType.CALL)
+        Writing covered puts is a bearish options trading strategy involving the
+        writing of put options while shorting the obligated shares of the underlying stock.
+
+        :param chain: Filtered Dataframe to vertical spreads with.
+        :param option_type: The option type for this spread
+        :return: A new dataframe containing all covered stock created from dataframe
+        """
+
+        if 'option_type' not in params:
+            raise ValueError("Must provide option_type for covered stock")
+
+        chains = OptionQuery(chain).option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
-        chains['mark'] = ((chains['bid'] + chains['ask']) / 2) * -100 + (100 * chains['underlying_price'])
-        chains['spread_symbol'] = "-." + chains['symbol'] + "+100*" + chains['symbol']
+        side = -1 * params['option_type'].value[1]
 
-        return chains[['symbol', 'quote_date', 'expiration', 'mark', 'underlying_price', 'strike']]
+        chains['spread_mark'] = (side * (chains['bid'] + chains['ask']) / 2) + chains['underlying_price']
 
-    @staticmethod
-    def custom(chain, **kwargs):
-        pass
+        prefix = "-." if params['option_type'] == OptionType.CALL else "."
+        chains['spread_symbol'] = prefix + chains['symbol'] + "+100*" + chains['underlying_symbol']
+
+        return chains[['symbol', 'quote_date', 'expiration', 'spread_mark', 'underlying_price', 'strike']]
 
 
 def construct(strategy, chains, **kwargs):

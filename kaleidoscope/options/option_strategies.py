@@ -17,6 +17,28 @@ class OptionStrategies(object):
     shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
 
     @staticmethod
+    def call(chain, **params):
+
+        chains = OptionQuery(chain).option_type(OptionType.CALL)
+        chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
+
+        chains['mark'] = (chains['bid'] + chains['ask']) / 2
+
+        return chains[['symbol', 'quote_date', 'expiration', 'mark',
+                       'underlying_price', 'strike']]
+
+    @staticmethod
+    def put(chain, **params):
+
+        chains = OptionQuery(chain).option_type(OptionType.PUT)
+        chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
+
+        chains['mark'] = (chains['bid'] + chains['ask']) / 2
+
+        return chains[['symbol', 'quote_date', 'expiration', 'mark',
+                       'underlying_price', 'strike']]
+
+    @staticmethod
     def vertical_spread(chain, **params):
         """
         The vertical spread is an option spread strategy whereby the
@@ -32,14 +54,13 @@ class OptionStrategies(object):
 
         if 'option_type' not in params or 'width' not in params:
             raise ValueError("Must provide option_type and width parameters for vertical spreads")
+        elif params['width'] <= 0:
+            raise ValueError("Width of vertical spreads cannot be less than or equal 0")
 
         chains = OptionQuery(chain).option_type(params['option_type'])
-
-        if 'DTE' in params:
-            chains = chains.lte('expiration', params['DTE'])
+        chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
         # shift only the strikes since this is a vertical spread
-        chains = chains.fetch()
         chains['strike_key'] = chains['strike'] + (params['width'] * params['option_type'].value[1])
         left_keys = ['quote_date', 'expiration', 'option_type', 'strike_key']
         right_keys = ['quote_date', 'expiration', 'option_type', 'strike']
@@ -47,30 +68,64 @@ class OptionStrategies(object):
         chains = chains.merge(chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
 
         # calculate the spread's bid and ask prices
-        for col in OptionStrategies.shift_col:
+        for c, f in OptionStrategies.shift_col:
             # handle bid ask special case
-            col_name = col[0]
-            func = col[1]
-            if col_name == 'bid':
-                chains['spread_' + col_name] = func(chains[col_name], chains['ask_shifted'])
-            elif col_name == 'ask':
-                chains['spread_' + col_name] = func(chains[col_name], chains['bid_shifted'])
+            if c == 'bid':
+                chains['spread_' + c] = f(chains[c], chains['ask_shifted'])
+            elif c == 'ask':
+                chains['spread_' + c] = f(chains[c], chains['bid_shifted'])
             else:
-                if func is not None:
-                    chains['spread_' + col_name] = func(chains[col_name], chains[col_name + '_shifted'])
+                if f is not None:
+                    chains['spread_' + c] = f(chains[c], chains[c + '_shifted'])
 
         chains['spread_mark'] = (chains['spread_bid'] + chains['spread_ask']) / 2
         chains['spread_symbol'] = chains['symbol'] + "-." + chains['symbol_shifted']
+
         return chains[['spread_symbol', 'quote_date', 'expiration', 'spread_mark',
                        'underlying_price', 'strike', 'strike_shifted']]
 
     @staticmethod
-    def iron_condor(chain, width, call_spread_width, put_spread_width):
+    def iron_condor(chain, **params):
+        """
+        The iron condor is an option trading strategy utilizing two vertical spreads
+        – a put spread and a call spread with the same expiration and four different strikes.
+        A long iron condor is essentially selling both sides of the underlying instrument by
+        simultaneously shorting the same number of calls and puts, then covering each position
+        with the purchase of further out of the money call(s) and put(s) respectively.
+        The converse produces a short iron condor.
 
-        call_side = OptionStrategies.vertical_spread(chain, width=call_spread_width, option_type=OptionType.CALL)
-        put_side = OptionStrategies.vertical_spread(chain, width=put_spread_width, option_type=OptionType.PUT)
+        :param chain: Filtered Dataframe to vertical spreads with.
+        :param width: Width between the middle strikes.
+        :param c_width: Width of the call spreads
+        :param p_width: Width of the put spreads
+        :return:
+        """
 
-        
+        call_side = OptionStrategies.vertical_spread(chain, width=params['c_width'], option_type=OptionType.CALL)
+        put_side = OptionStrategies.vertical_spread(chain, width=params['p_width'], option_type=OptionType.PUT)
+        put_side['strike_key'] = put_side['strike'] + params['width']
+
+        call_side_keys = ['quote_date', 'expiration', 'strike']
+        put_side_keys = ['quote_date', 'expiration', 'strike_key']
+
+        chains = call_side.merge(put_side, left_on=call_side_keys, right_on=put_side_keys, suffixes=('_c', '_p'))
+
+        chains['spread_mark'] = chains['spread_mark_c'] + chains['spread_mark_p']
+        chains['spread_symbol'] = chains['spread_symbol_c'] + "+." + chains['spread_symbol_p']
+
+        return chains[['spread_symbol', 'quote_date', 'expiration', 'spread_mark',
+                       'underlying_price_c', 'strike_c', 'strike_shifted_c', 'strike_p', 'strike_shifted_p']]
+
+    @staticmethod
+    def covered_call(chain, **params):
+
+        chains = OptionQuery(chain).option_type(OptionType.CALL)
+        chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
+
+        chains['mark'] = ((chains['bid'] + chains['ask']) / 2) * -100 + (100 * chains['underlying_price'])
+        chains['spread_symbol'] = "-." + chains['symbol'] + "+100*" + chains['symbol']
+
+        return chains[['symbol', 'quote_date', 'expiration', 'mark', 'underlying_price', 'strike']]
 
     @staticmethod
     def custom(chain, **kwargs):
@@ -92,6 +147,6 @@ def construct(strategy, chains, **kwargs):
     spread_chains = strategy(chains, **kwargs)
 
     # assign the name of this concatenated dataframe to be the name of the strategy function
-    spread_chains.name = strategy.__name__
+    # spread_chains.name = strategy.__name__
 
     return OptionSeries(spread_chains)

@@ -2,6 +2,18 @@
 
 Kaleidoscope allows you to model and analyse option spread prices and greeks from historical options data. Use the built-in methods to price various options spreads or construct your own composite option spreads and plot the changes in price and greeks as time passes.
 
+The following strategies are currently supported:
+* Single Calls/Puts
+* Vertical Spreads
+* Iron Condors (Iron Butterflies)
+* Covered Calls
+
+Planned Support:
+* Combos (Synthetics/Collars)
+* Diagonal Spreads
+* Calendar Spreads
+* Custom Spreads
+
 ## Installation
 
 ### Quick start
@@ -9,8 +21,8 @@ Kaleidoscope allows you to model and analyse option spread prices and greeks fro
 To set up a development environment quickly, first install Python 3. It
 comes with virtualenv built-in. So create a virtual env by:
 
-    1. `$ python3 -m venv bonzai`
-    2. `$ . bonzai/bin/activate`
+    1. `$ python3 -m venv kaleidoscope`
+    2. `$ . kaleidoscope/bin/activate`
 
 Install all dependencies:
 
@@ -24,7 +36,6 @@ Take a look at the docs for more information.
 
 ## License Terms
 
-Copyright (c) 2015-2017 Michael Halls-Moore
 
 Copyright (c) 2017 Michael Chu
 

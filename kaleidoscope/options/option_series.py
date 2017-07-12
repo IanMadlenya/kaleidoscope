@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
 
 from kaleidoscope.group_performance import GroupPerformance
 
@@ -107,7 +108,9 @@ class OptionSeries(object):
         # reset dataframe labels and column names to be numeric
         data.columns = [i for i in range(data.shape[1])]
         data.reset_index(inplace=True)
-        data.drop('spread_symbol', axis=1, inplace=True)
+
+        # drop either symbol or spread_symbol columns depending on strategy
+        data.drop('symbol' if 'spread_symbol' not in data else 'spread_symbol', axis=1, inplace=True)
 
         x = data.columns
         y = data.index

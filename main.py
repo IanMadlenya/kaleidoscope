@@ -15,14 +15,24 @@ def start():
     call_spreads = kd.construct(kd.OptionStrategies.vertical_spread,
                                 data,
                                 option_type=kd.OptionType.CALL,
-                                DTE=kd.Period.SEVEN_WEEKS,
+                                DTE=kd.Period.THREE_WEEKS,
                                 width=2
                                 )
+
+    iron_condors = kd.construct(kd.OptionStrategies.iron_condor,
+                                data,
+                                DTE=kd.Period.SEVEN_WEEKS,
+                                width=10,
+                                c_width=2,
+                                p_width=2
+                                )
+
+    covered_calls = kd.construct(kd.OptionStrategies.covered_call, data)
 
     program_ends = time.time()
     print("The simulation ran for {0} seconds.".format(round(program_ends - program_starts, 2)))
 
-    call_spreads.plot('2016-02-19')
+    iron_condors.plot('2016-02-19')
 
 if __name__ == "__main__":
     start()

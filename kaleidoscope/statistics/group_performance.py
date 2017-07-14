@@ -1,6 +1,6 @@
 from beautifultable import BeautifulTable
 
-from kaleidoscope.performance import Performance
+from kaleidoscope.statistics.performance import Performance
 
 
 class GroupPerformance(dict):

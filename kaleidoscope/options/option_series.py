@@ -2,9 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import cm
-from mpl_toolkits.mplot3d import Axes3D
 
-from kaleidoscope.group_performance import GroupPerformance
+from kaleidoscope.statistics.group_performance import GroupPerformance
 
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('display.max_rows', None)

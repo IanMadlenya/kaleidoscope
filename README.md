@@ -1,6 +1,7 @@
 # Kaleidoscope
 
-Kaleidoscope allows you to model and analyse option spread prices and greeks from historical options data. Use the built-in methods to price various options spreads or construct your own composite option spreads and plot the changes in price and greeks as time passes.
+Kaleidoscope allows you to model and analyse option spread prices and greeks from historical options data. Use the built-in methods to construct various options spreads or create your own composite option spreads and plot the historical payoff charts.
+A built-in backtester allows for backtesting of the supported options spreads based on complex entry / exit / adjustment criteria.
 
 The following strategies are currently supported:
 * Single Calls/Puts

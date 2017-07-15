@@ -1,59 +1,31 @@
-import time
-import itertools
 import collections
+import itertools
+import time
 
+from kaleidoscope.backtester.brokers import DefaultBroker
 from kaleidoscope.backtester.commissions import Commission
-from kaleidoscope.backtester.sizer import Sizer
-from kaleidoscope.options.option_strategies import construct
-from kaleidoscope.options.option_strategies import OptionStrategies
-from kaleidoscope.data import get
+from kaleidoscope.backtester.sizers.sizer_dollar_amt import SizerDollarAmount
 
 
 class Backtest(object):
-    def __init__(self, data=None, balance=10000,
-                 commissions=Commission.tos, sizer=Sizer.quantity,
-                 sizer_params=None, start=None, end=None):
+    def __init__(self):
 
-        """
+        self.data = None
 
-        :param data: The option spreads to run backtest for
-        :param balance: The initial starting balance of the account
-        :param commissions: The commission schedule to apply for each transaction
-        :param sizer: The sizer function that determines the quantity to trade with
-        :param sizer_params: Any params to pass into the sizer function
-        :param start: start date of backtest if not same as option chain date range
-        :param end: end date of backtest if not same as option chain date range
-        :return: performance object containing the results of the backtest
-        """
-        self.data = data
-        self.balance = balance
-        self.comm = commissions
-        self.sizer = sizer
-        self.sizer_params = sizer_params
-        self.start = start
-        self.end = end
+        self.broker = DefaultBroker()
+        self.comm = Commission.default_commissions
+        self.sizer = SizerDollarAmount()
 
         self.strats = list()
 
-    def get_data(self, ticker, start, end,
-                 provider=None, path=None,
-                 include_splits=False, option_type=None):
+    def add_data(self, data):
         """
         Calls the internal 'get' method to retrieve option chain data from
         data source and stores it in this instance of backtester.
 
-        :param ticker: the symbol to download
-        :param start: expiration start date of downloaded data
-        :param end: expiration end date of downloaded data
-        :param provider: The data source to use for downloading data, reference to function
-                         Defaults to sqlite database
-        :param path: Path to the data source
-        :param include_splits: Should data exclude options created from the underlying's stock splits
-        :param option_type: If None, or not passed in, will retrieve both calls and puts of option chain
-        :return: Dataframe containing all option chains as filtered by algo for the specified date range
+        :param data: The data to use for this backtest session
         """
-
-        self.data = get(ticker, start, end, provider, path, include_splits, option_type)
+        self.data = data
 
     def add_strategy(self, strategy, **kwargs):
         """
@@ -67,7 +39,11 @@ class Backtest(object):
         :return:
         """
 
-        self.strats.append([strategy, kwargs])
+        self.strats.append([(strategy, kwargs)])
+
+        # here we return the index to refer to the strategy incase we want to
+        # add or reference this strategy e.g. adding specific sizer for this strat
+        return len(self.strats) - 1
 
     def add_opt_strategy(self, strategy, **kwargs):
         """
@@ -80,19 +56,39 @@ class Backtest(object):
         :return:
         """
 
-        # apply cartesian product of all params to generate all combinations of
-        # strategies to test for
+        # apply cartesian product of all params to generate all combinations of strategies to test for
         opt_keys = list(kwargs)
 
         vals = self.iterize(kwargs.values())
         opt_vals = itertools.product(*vals)
 
         o_kwargs1 = map(zip, itertools.repeat(opt_keys), opt_vals)
-
         opt_kwargs = map(dict, o_kwargs1)
 
         it = itertools.product([strategy], opt_kwargs)
         self.strats.append(it)
+
+    def add_sizer(self, sizer, **kwargs):
+        """
+        Adds a Sizer that will be applied to any strategy added to backtester.
+        This would be the default sizer for all strategies.
+
+        :param sizer: sizer class
+        :param kwargs: params to pass to sizer
+        :return:
+        """
+        pass
+
+    def add_sizer_by_idx(self, idx, sizer, **kwargs):
+        """
+        Adds a Sizer that will be applied to the strategy referenced by the index.
+
+        :param idx: the index referring to the strategy to apply the sizer to
+        :param sizer: sizer class
+        :param kwargs: params to pass to sizer
+        :return:
+        """
+        pass
 
     @staticmethod
     def iterize(iterable):
@@ -114,8 +110,17 @@ class Backtest(object):
         return niterable
 
     def run(self):
+
+        if not self.data:
+            return []  # nothing can be run
+
         # program timer
         program_starts = time.time()
+
+        for strat in self.strats:
+            strategy = strat[0]
+            strat_run = strategy(strat[1])
+            print(strat_run)
 
         program_ends = time.time()
         print("The simulation ran for {0} seconds.".format(round(program_ends - program_starts, 2)))

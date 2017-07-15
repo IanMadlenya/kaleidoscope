@@ -7,8 +7,12 @@ class SimpleBuySell(kd.Strategy):
     The target prices for each transaction are specified by the user or optimization params.
     """
 
-    def __init__(self, data, **kwargs):
-        pass
+    def __init__(self, kwargs):
+        self.add_options(kd.OptionStrategies.vertical,
+                         option_type=kd.OptionType.CALL,
+                         DTE=kd.Period.SEVEN_WEEKS,
+                         width=2
+                         )
 
     def next(self):
         pass

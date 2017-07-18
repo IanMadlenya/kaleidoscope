@@ -1,7 +1,8 @@
 import pandas as pd
+from datetime import timedelta
 
 from kaleidoscope.data import opt_params
-from kaleidoscope.globals import OptionType
+from kaleidoscope.globals import OptionType, Period
 from kaleidoscope.options.option_query import OptionQuery
 from kaleidoscope.options.option_series import OptionSeries
 
@@ -15,31 +16,28 @@ class OptionStrategies(object):
     """
 
     shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
+    base_out_col = ['spread_symbol', 'quote_date', 'expiration', 'spread_mark']
 
     @staticmethod
-    def call(chain, **params):
+    def single(chain, **params):
 
-        chains = OptionQuery(chain).option_type(OptionType.CALL)
+        if 'option_type' not in params:
+            raise ValueError("Must provide option_type for single option")
+
+        # set the attributes for this option strategy
+        OptionStrategies.single.option_config = {'option': 1}
+
+        out_col = OptionStrategies.base_out_col
+
+        chains = OptionQuery(chain).option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
-        chains['mark'] = (chains['bid'] + chains['ask']) / 2
+        chains['spread_mark'] = (chains['bid'] + chains['ask']) / 2
 
-        return chains[['symbol', 'quote_date', 'expiration', 'mark',
-                       'underlying_price', 'strike']]
-
-    @staticmethod
-    def put(chain, **params):
-
-        chains = OptionQuery(chain).option_type(OptionType.PUT)
-        chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
-
-        chains['mark'] = (chains['bid'] + chains['ask']) / 2
-
-        return chains[['symbol', 'quote_date', 'expiration', 'mark',
-                       'underlying_price', 'strike']]
+        return chains[out_col + ['strike']]
 
     @staticmethod
-    def vertical_spread(chain, **params):
+    def vertical(chain, **params):
         """
         The vertical spread is an option spread strategy whereby the
         option trader purchases a certain number of options and simultaneously
@@ -57,6 +55,11 @@ class OptionStrategies(object):
         elif params['width'] <= 0:
             raise ValueError("Width of vertical spreads cannot be less than or equal 0")
 
+        # set the attributes for this option strategy
+        OptionStrategies.vertical.option_config = {'option': 2}
+
+        out_col = OptionStrategies.base_out_col
+
         chains = OptionQuery(chain).option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
@@ -67,6 +70,7 @@ class OptionStrategies(object):
 
         chains = chains.merge(chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
 
+        # TODO: Refactor code below
         # calculate the spread's bid and ask prices
         for c, f in OptionStrategies.shift_col:
             # handle bid ask special case
@@ -81,8 +85,7 @@ class OptionStrategies(object):
         chains['spread_mark'] = (chains['spread_bid'] + chains['spread_ask']) / 2
         chains['spread_symbol'] = chains['symbol'] + "-." + chains['symbol_shifted']
 
-        return chains[['spread_symbol', 'quote_date', 'expiration', 'spread_mark',
-                       'underlying_price', 'strike', 'strike_shifted']]
+        return chains[out_col + ['strike', 'strike_shifted']]
 
     @staticmethod
     def iron_condor(chain, **params):
@@ -101,8 +104,16 @@ class OptionStrategies(object):
         :return: A new dataframe containing all iron condors created from dataframe
         """
 
-        call_side = OptionStrategies.vertical_spread(chain, width=params['c_width'], option_type=OptionType.CALL)
-        put_side = OptionStrategies.vertical_spread(chain, width=params['p_width'], option_type=OptionType.PUT)
+        if 'c_width' not in params or 'p_width' not in params or 'width' not in params:
+            raise ValueError("Must define all widths for iron condor")
+
+        # set the attributes for this option strategy
+        OptionStrategies.iron_condor.option_config = {'option': 4}
+
+        out_col = OptionStrategies.base_out_col
+
+        call_side = OptionStrategies.vertical(chain, width=params['c_width'], option_type=OptionType.CALL)
+        put_side = OptionStrategies.vertical(chain, width=params['p_width'], option_type=OptionType.PUT)
         put_side['strike_key'] = put_side['strike'] + params['width']
 
         call_side_keys = ['quote_date', 'expiration', 'strike']
@@ -113,8 +124,7 @@ class OptionStrategies(object):
         chains['spread_mark'] = chains['spread_mark_c'] + chains['spread_mark_p']
         chains['spread_symbol'] = chains['spread_symbol_c'] + "+." + chains['spread_symbol_p']
 
-        return chains[['spread_symbol', 'quote_date', 'expiration', 'spread_mark',
-                       'underlying_price_c', 'strike_c', 'strike_shifted_c', 'strike_p', 'strike_shifted_p']]
+        return chains[out_col + ['strike_c', 'strike_shifted_c', 'strike_p', 'strike_shifted_p']]
 
     @staticmethod
     def covered_stock(chain, **params):
@@ -134,6 +144,11 @@ class OptionStrategies(object):
         if 'option_type' not in params:
             raise ValueError("Must provide option_type for covered stock")
 
+        # set the attributes for this option strategy
+        OptionStrategies.covered_stock.option_config = {'stock': 100, 'option': 1}
+
+        out_col = OptionStrategies.base_out_col
+
         chains = OptionQuery(chain).option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
@@ -144,24 +159,117 @@ class OptionStrategies(object):
         prefix = "-." if params['option_type'] == OptionType.CALL else "."
         chains['spread_symbol'] = prefix + chains['symbol'] + "+100*" + chains['underlying_symbol']
 
-        return chains[['symbol', 'quote_date', 'expiration', 'spread_mark', 'underlying_price', 'strike']]
+        return chains[out_col + ['strike']]
+
+    @staticmethod
+    def diagonal(chain, **params):
+        pass
+
+    @staticmethod
+    def double_diagonal(chain, **params):
+        pass
+
+    @staticmethod
+    def calendar(chain, **params):
+        """
+        A calendar spread is a strategy involving buying longer term options and selling 
+        equal number of shorter term options of the same underlying stock or index with the 
+        same strike price. Calendar spreads can be done with calls or with puts, 
+        which are virtually equivalent if using same strikes and expirations.
+        
+        They can use ATM (At The Money) strikes which make the trade neutral.
+        If using OTM (Out Of The Money) or ITM (In The Money) strikes, 
+        the trade becomes directionally biased.
+
+        :param chain: Filtered Dataframe to vertical spreads with.
+        :param option_type: The option type for this spread
+        :param depth: The period to represent the difference between the expiration dates of the two options
+        :return: A new dataframe containing all covered stock created from dataframe
+        """
+        if 'option_type' not in params:
+            raise ValueError("Must provide option_type for calendar spread")
+        elif 'depth' not in params:
+            raise ValueError("Must provide period depth for calender spread")
+
+        # set the attributes for this option strategy
+        OptionStrategies.calendar.option_config = {'option': 2}
+
+        out_col = OptionStrategies.base_out_col
+        shift = Period.ONE_WEEK if 'depth' not in params else params['depth']
+
+        chains = OptionQuery(chain).option_type(params['option_type'])
+        chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
+        # create column with expiration shifted by depth
+        chains['expiration_key'] = chains['expiration'] + timedelta(days=shift.value)
+
+        left_keys = ['quote_date', 'expiration_key', 'option_type', 'strike']
+        right_keys = ['quote_date', 'expiration', 'option_type', 'strike']
+
+        chains = chains.merge(chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
+
+        if chains.empty:
+            raise ValueError("Cannot construct calendar spreads. Check expirations exists for specified depth.")
+
+        # calculate the spread's bid and ask prices
+        for c, f in OptionStrategies.shift_col:
+            # handle bid ask special case
+            if c == 'bid':
+                chains['spread_' + c] = f(chains[c], chains['ask_shifted'])
+            elif c == 'ask':
+                chains['spread_' + c] = f(chains[c], chains['bid_shifted'])
+            else:
+                if f is not None:
+                    chains['spread_' + c] = f(chains[c], chains[c + '_shifted'])
+
+        chains['spread_mark'] = (chains['spread_bid'] + chains['spread_ask']) / 2
+        chains['spread_symbol'] = "." + chains['symbol_shifted'] + "-." + chains['symbol']
+
+        # assign the strategy name to this dataframe's name attribute
+        chains.name = OptionStrategies.single.__name__
+
+        return chains[out_col + ['strike', 'expiration_shifted']]
+
+    @staticmethod
+    def straddle(chain, **params):
+        pass
+
+    @staticmethod
+    def strangle(chain, **params):
+        pass
+
+    @staticmethod
+    def combo(chain, **params):
+        pass
+
+    @staticmethod
+    def back_ratio(chain, **params):
+        pass
+
+    @staticmethod
+    def butterfly(chain, **params):
+        pass
+
+    @staticmethod
+    def condor(chain, **params):
+        pass
+
+    @staticmethod
+    def custom(chain, **params):
+        pass
 
 
-def construct(strategy, chains, **kwargs):
+def construct(symbol, strategy, chains, **kwargs):
     """
     This is a convenience method to allow for creation of option spreads
     from predefined sources.
 
+    :param symbol: The symbol of the option chains
     :param strategy: The option strategy filter to use
     :param chains: Option chains data to use. This data should come from data.get() method
     :param kwargs: Parameters used to construct the spreads
     :return:
     """
 
-    # Batch create vertical call spreads on all strikes
+    # wrap dataframes into OptionSeries object to be used in backtest
     spread_chains = strategy(chains, **kwargs)
-
-    # assign the name of this concatenated dataframe to be the name of the strategy function
-    # spread_chains.name = strategy.__name__
-
-    return OptionSeries(spread_chains)
+    return OptionSeries(symbol, strategy.__name__, spread_chains, **kwargs)

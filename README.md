@@ -1,20 +1,34 @@
 # Kaleidoscope
 
-Kaleidoscope allows you to model and analyse option spread prices and greeks from historical options data. Use the built-in methods to price various options spreads or construct your own composite option spreads and plot the changes in price and greeks as time passes.
+This library allows you to backtest options strategies with your own historical options data. Use the built-in functions to generate options spreads with adjustable parameters and backtest them with your own custom entry / exit / adjustment criteria.
 
-The following strategies are currently supported:
-* Single Calls/Puts
-* Vertical Spreads
-* Iron Condors (Iron Butterflies)
-* Covered Stock
+## Goals
+This project was developed because I was learning to trade options and had a need for a simple and flexible trading library that will allow me to backtest my option trading strategies.
+At the time of its development, it was difficult to find options backtesting software/libraries that allows the flexibility of testing options spreads with complex entry, exit or adjustment criteria. I wrote this library to meed that need and I hope it will help you too!
 
-Planned Support:
-* Combos (Synthetics/Collars)
-* Diagonal Spreads
-* Calendar Spreads
-* Custom Spreads
-* Strangles
-* Straddles
+## Features
+* Uses Pandas library under the hood to generate options spreads efficiently.
+* Option spreads can be generated with adjustable parameters such as strike width and expiration dates. This allows you to create more advance strategies such as broken-wing butterflies/iron condors
+* Generates historical option spread prices for all possible strike combinations from the option chain.
+* Use your own options data source by using the built-in data adapters or write your own. (Currently supports sqlite)
+* Integrated brokerage simulation with market and limit orders
+* Interchangeable and extensible position sizers, slippage and commissions modules
+* Optimization support: define a range for your strategy parameters and the system will execute the strategy for each value of the range
+* The following options strategies are currently supported:
+    * Single Calls/Puts
+    * Vertical Spreads
+    * Iron Condors (Iron Butterflies)
+    * Covered Stock
+
+### Coming Soon
+* CSV file support
+* Option strategy support:
+    * Combos (Synthetics/Collars)
+    * Diagonal Spreads
+    * Calendar Spreads
+    * Custom Spreads
+    * Strangles
+    * Straddles
 
 ## Installation
 
@@ -33,16 +47,3 @@ Install all dependencies:
 ### Detailed instructions
 
 Take a look at the docs for more information.
-
-[0]: https://www.python.org/
-
-## License Terms
-
-
-Copyright (c) 2017 Michael Chu
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

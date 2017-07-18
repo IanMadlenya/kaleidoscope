@@ -2,9 +2,14 @@
 
 from pandas.core.base import PandasObject
 
-from kaleidoscope.globals import Period, OptionType
-from kaleidoscope.options.option_strategies import OptionStrategies
+from .backtester import strategies as strategies
+from .backtester import sizers as sizers
+from .backtester import brokers as brokers
+
+from .options.option_strategies import OptionStrategies, construct
+from .backtester.backtest import Backtest
+from .backtester.commissions import Commission
 from .data import get, output_to_csv
-from .options.option_strategies import construct
+from .globals import Period, OptionType
 
 PandasObject.output_to_csv = data.output_to_csv

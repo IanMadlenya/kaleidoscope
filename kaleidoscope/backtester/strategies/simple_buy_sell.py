@@ -1,18 +1,23 @@
-import kaleidoscope as kd
+from kaleidoscope.options.option_strategies import OptionStrategies
+from kaleidoscope.globals import OptionType
+from .strategy import Strategy
 
 
-class SimpleBuySell(kd.Strategy):
+class SimpleBuySell(Strategy):
     """
     This Strategy will perform a simple buy/sell or sell/buy for an option spread.
     The target prices for each transaction are specified by the user or optimization params.
     """
 
-    def __init__(self, kwargs):
-        self.add_options(kd.OptionStrategies.vertical,
-                         option_type=kd.OptionType.CALL,
-                         DTE=kd.Period.SEVEN_WEEKS,
-                         width=2
-                         )
+    def on_init(self, **params):
+        self.set_cash(10000)
+        self.set_start_date(2016, 2, 19)
+        self.set_end_date(2016, 2, 19)
+        self.add_option("VXX",
+                        OptionStrategies.vertical,
+                        option_type=OptionType.CALL,
+                        width=params['width']
+                        )
 
-    def next(self):
+    def on_data(self, data):
         pass

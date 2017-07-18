@@ -70,6 +70,7 @@ class OptionStrategies(object):
 
         chains = chains.merge(chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
 
+        # TODO: Refactor code below
         # calculate the spread's bid and ask prices
         for c, f in OptionStrategies.shift_col:
             # handle bid ask special case
@@ -223,6 +224,9 @@ class OptionStrategies(object):
         chains['spread_mark'] = (chains['spread_bid'] + chains['spread_ask']) / 2
         chains['spread_symbol'] = "." + chains['symbol_shifted'] + "-." + chains['symbol']
 
+        # assign the strategy name to this dataframe's name attribute
+        chains.name = OptionStrategies.single.__name__
+
         return chains[out_col + ['strike', 'expiration_shifted']]
 
     @staticmethod
@@ -254,21 +258,18 @@ class OptionStrategies(object):
         pass
 
 
-def construct(strategy, chains, **kwargs):
+def construct(symbol, strategy, chains, **kwargs):
     """
     This is a convenience method to allow for creation of option spreads
     from predefined sources.
 
+    :param symbol: The symbol of the option chains
     :param strategy: The option strategy filter to use
     :param chains: Option chains data to use. This data should come from data.get() method
     :param kwargs: Parameters used to construct the spreads
     :return:
     """
 
-    # Batch create vertical call spreads on all strikes
+    # wrap dataframes into OptionSeries object to be used in backtest
     spread_chains = strategy(chains, **kwargs)
-
-    # assign the name of this concatenated dataframe to be the name of the strategy function
-    # spread_chains.name = strategy.__name__
-
-    return OptionSeries(spread_chains)
+    return OptionSeries(symbol, strategy.__name__, spread_chains, **kwargs)

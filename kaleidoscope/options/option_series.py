@@ -14,7 +14,7 @@ class OptionSeries(object):
     This class contains the time series data for an option strategy.
     """
 
-    def __init__(self, data, index=None, dropna=False):
+    def __init__(self, symbol, strategy, data, index=None, dropna=False, **params):
         """
         Initialize this class with a dataframe of option strategy prices by
         symbol, quote date, expiration, mark, other metrics, etc
@@ -22,6 +22,7 @@ class OptionSeries(object):
         This class will then store the data in a dictionary by expiration dates
         and provide methods that will act on this data.
 
+        :param symbol: symbol of option chains contained in this object
         :param data: Dataframe containing the time series data of an option strategy.
                      This dataframe must contain the following columns:
                      symbol, quote_date, expiration, mark
@@ -29,6 +30,7 @@ class OptionSeries(object):
                       if the columns are not listed in that order in the DataFrame.
                       If None, this function will infer the columns by the default order
         :param dropna: Drop all rows containing NaN in OptionSeries
+        :param params: Parameters used to construct the spread data for this OptionSeries
         """
 
         # TODO: check index param's length is equal to 3
@@ -39,7 +41,12 @@ class OptionSeries(object):
         elif index is not None and len(index) != 3:
             raise ValueError('index length must be 3')
         else:
+
             self.option_chains = {}
+
+            self.symbol = symbol
+            self.strategy = strategy
+            self.params = params
 
             data.set_index(['expiration'], inplace=True)
             data.sort_index(inplace=True)
@@ -78,21 +85,6 @@ class OptionSeries(object):
         """
         for series in sorted(self.option_chains)[-n:]:
             print(self.option_chains[series])
-
-    def calc_stats(self, spread_values, period_start=None, period_end=None):
-        """
-        Display performance statistics for the chose price points and periods
-        
-        :param spread_values: A price point to generate statistics for, can also be a list of price points
-        :param period_start: Periods range to base statistics on. A list of slice indices
-        :param period_end: Periods range to base statistics on. A list of slice indices
-        :return: Performance object
-        """
-
-        if isinstance(spread_values, tuple):
-            return GroupPerformance(self.option_chains, period_start, period_end, spread_values)
-        else:
-            raise ValueError("spread_value must be of type tuple")
 
     def plot(self, exp):
         """

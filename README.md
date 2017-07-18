@@ -4,7 +4,7 @@ This library allows you to backtest options strategies with your own historical 
 
 ## Goals
 This project was developed because I was learning to trade options and had a need for a simple and flexible trading library that will allow me to backtest my option trading strategies.
-At the time of its development, it was difficult to find options backtesting software/libraries that allows the flexibility of testing options spreads with complex entry, exit or adjustment criteria. I wrote this library to meed that need and I hope it will help you too!
+At the time of its development, it was difficult to find options backtesting software/libraries that allows the flexibility of testing options spreads with complex entry, exit or adjustment criteria. I wrote this library to meet that need and I hope it will help you too!
 
 ## Features
 * Uses Pandas library under the hood to generate options spreads efficiently.
@@ -46,4 +46,4 @@ Install all dependencies:
 
 ### Detailed instructions
 
-Take a look at the docs for more information.
+Coming soon!

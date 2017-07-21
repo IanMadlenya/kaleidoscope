@@ -1,6 +1,7 @@
 from enum import Enum
+from kaleidoscope.options.option_query import OptionQuery
 
-EventType = Enum("EventType", "TICK BAR SIGNAL ORDER FILL SENTIMENT")
+EventType = Enum("EventType", "DATA ORDER FILL")
 
 
 class Event(object):
@@ -15,24 +16,23 @@ class Event(object):
         return self.event_type.name
 
 
-class BarEvent(Event):
+class DataEvent(Event):
     """
     Handles the event of receiving a new market
     open-high-low-close-volume bar, as would be generated
     via common data providers such as Yahoo Finance.
     """
 
-    def __init__(self, ticker, prices, volume):
+    def __init__(self, date, quotes):
         """
 
-        :param ticker:
-        :param prices:
-        :param volume:
+        :param date: The date of the quotes
+        :param quotes: A DataFrame containing option chains for all
+                       subscribed symbols
         """
-        self.event_type = EventType.BAR
-        self.ticker = ticker
-        self.prices = prices
-        self.volume = volume
+        self.type = EventType.DATA
+        self.date = date
+        self.quotes = OptionQuery(quotes)
 
 
 class OrderEvent(Event):
@@ -42,7 +42,7 @@ class OrderEvent(Event):
     and quantity.
     """
 
-    def __init__(self, ticker, action, quantity):
+    def __init__(self, symbol, action, quantity):
         """
         Initialises the OrderEvent.
 
@@ -51,8 +51,8 @@ class OrderEvent(Event):
         action - 'BOT' (for long) or 'SLD' (for short).
         quantity - The quantity of shares to transact.
         """
-        self.event_type = EventType.ORDER
-        self.ticker = ticker
+        self.type = EventType.ORDER
+        self.symbol = symbol
         self.action = action
         self.quantity = quantity
 
@@ -61,8 +61,8 @@ class OrderEvent(Event):
         Outputs the values within the OrderEvent.
         """
         print(
-            "Order: Ticker=%s, Action=%s, Quantity=%s" % (
-                self.ticker, self.action, self.quantity
+            "Order: Symbol=%s, Action=%s, Quantity=%s" % (
+                self.symbol, self.action, self.quantity
             )
         )
 
@@ -75,11 +75,10 @@ class FillEvent(Event):
     the commission of the trade from the brokerage.
     """
 
-    def __init__(
-            self, datestamp, ticker,
-            action, quantity, price,
-            commission
-    ):
+    def __init__(self, date, symbol,
+                 action, quantity, price,
+                 commission
+                 ):
         """
         Initialises the FillEvent object.
 
@@ -91,9 +90,9 @@ class FillEvent(Event):
         price - The price at which the trade was filled
         commission - The brokerage commission for carrying out the trade.
         """
-        self.event_type = EventType.FILL
-        self.datestamp = datestamp
-        self.ticker = ticker
+        self.type = EventType.FILL
+        self.date = date
+        self.ticker = symbol
         self.action = action
         self.quantity = quantity
         self.price = price

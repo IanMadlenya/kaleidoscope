@@ -1,19 +1,27 @@
 import datetime
-from abc import ABC, abstractmethod
+from kaleidoscope.globals import OrderType
+from kaleidoscope.event import OrderEvent
+from kaleidoscope.sizers.sizers import FixedQuantitySizer
 
 
-class Strategy(ABC):
+class Strategy(object):
     """
     This is the base class that holds various functions that implement custom trading
     logic such as entry/exit strategies and other trading mechanics
     based on option greeks and prices.
     """
 
-    def __init__(self, broker, account, **params):
+    def __init__(self, broker, account, queue, **params):
         self.broker = broker
         self.account = account
+
+        self.queue = queue
+
         self.start_date = None
         self.end_date = None
+
+        if 'sizer' not in params:
+            self.sizer = FixedQuantitySizer(self.account)
 
         self._init(**params)
 
@@ -26,16 +34,16 @@ class Strategy(ABC):
         """
         self.account.set_cash(amt)
 
-    def add_option(self, symbol, strat, **params):
+    def add_option(self, symbol, exclude_splits=True, option_type=None):
         """
         Pass the parameters and option strategy to create to the broker
 
         :param symbol: symbol to add option for
-        :param strat: option strategy to create
-        :param params: params to create option strategy with
-        :return:
+        :param exclude_splits: exclude options created from the underlying's stock splits
+        :param option_type: If None, or not passed in, will retrieve both calls and puts of option chain
+        :return: None
         """
-        self.broker.source(symbol, strat, self.start_date, self.end_date, **params)
+        self.broker.source(symbol, self.start_date, self.end_date, exclude_splits, option_type)
 
     def set_start_date(self, year, month, day):
         """
@@ -68,29 +76,52 @@ class Strategy(ABC):
         :param params: params to be passed into custom strategy
         :return:
         """
+
+        # register strategy params as instance class attributes
+        self.__dict__.update(params)
+
         self.on_init(**params)
 
-    @abstractmethod
     def on_init(self, **params):
         raise NotImplementedError
 
-    @abstractmethod
     def on_data(self, data):
         raise NotImplementedError
 
-    def on_order_event(self, order_event):
-        raise NotImplementedError
-
-    def on_fill_event(self, order_event):
-        raise NotImplementedError
+    def on_fill(self, event):
+        pass
 
     def stop(self):
         pass
 
-    def buy(self):
-        pass
+    def buy(self, options, order_type=OrderType.MKT, quantity=None):
+        """
+        Create a buy signal event and place it in the queue
 
-    def sell(self):
+        :param options:
+        :param order_type:
+        :param quantity:
+        :return:
+        """
+        if quantity <= 0:
+            raise ValueError("Quantity cannot be less than 1")
+
+        if quantity is None:
+            # use sizer to determine quantity
+            quantity = self.sizer.order_size(self.account, )
+
+        event = OrderEvent(options, order_type, quantity)
+
+        self.queue.put(event)
+
+    def sell(self, options, order_type=OrderType.MKT, quantity=None):
+        """
+        Create a sell order event and place it in the queue
+        :param options:
+        :param order_type:
+        :param quantity:
+        :return:
+        """
         pass
 
     def close(self):

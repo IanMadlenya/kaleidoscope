@@ -43,3 +43,8 @@ class Action(Enum):
 class OptionType(Enum):
     CALL = ('c', 1)
     PUT = ('p', -1)
+
+
+OrderType = Enum("OrderType", "MKT, LMT")
+
+SecType = Enum("SecType", "STK OPT")

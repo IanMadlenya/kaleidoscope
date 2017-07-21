@@ -1,7 +1,7 @@
-import pandas as pd
 from datetime import timedelta
 
-from kaleidoscope.data import opt_params
+import pandas as pd
+
 from kaleidoscope.globals import OptionType, Period
 from kaleidoscope.options.option_query import OptionQuery
 from kaleidoscope.options.option_series import OptionSeries
@@ -15,9 +15,6 @@ class OptionStrategies(object):
     Static methods to define option strategies
     """
 
-    shift_col = [(col[0], col[3]) for col in opt_params if col[2] == 1 and col[1] != -1]
-    base_out_col = ['spread_symbol', 'quote_date', 'expiration', 'spread_mark']
-
     @staticmethod
     def single(chain, **params):
 
@@ -27,14 +24,10 @@ class OptionStrategies(object):
         # set the attributes for this option strategy
         OptionStrategies.single.option_config = {'option': 1}
 
-        out_col = OptionStrategies.base_out_col
-
         chains = OptionQuery(chain).option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
-        chains['spread_mark'] = (chains['bid'] + chains['ask']) / 2
-
-        return chains[out_col + ['strike']]
+        return chains
 
     @staticmethod
     def vertical(chain, **params):
@@ -55,37 +48,17 @@ class OptionStrategies(object):
         elif params['width'] <= 0:
             raise ValueError("Width of vertical spreads cannot be less than or equal 0")
 
-        # set the attributes for this option strategy
-        OptionStrategies.vertical.option_config = {'option': 2}
-
-        out_col = OptionStrategies.base_out_col
-
         chains = OptionQuery(chain).option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
         # shift only the strikes since this is a vertical spread
         chains['strike_key'] = chains['strike'] + (params['width'] * params['option_type'].value[1])
-        left_keys = ['quote_date', 'expiration', 'option_type', 'strike_key']
-        right_keys = ['quote_date', 'expiration', 'option_type', 'strike']
+        left_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike_key']
+        right_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike']
 
         chains = chains.merge(chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
 
-        # TODO: Refactor code below
-        # calculate the spread's bid and ask prices
-        for c, f in OptionStrategies.shift_col:
-            # handle bid ask special case
-            if c == 'bid':
-                chains['spread_' + c] = f(chains[c], chains['ask_shifted'])
-            elif c == 'ask':
-                chains['spread_' + c] = f(chains[c], chains['bid_shifted'])
-            else:
-                if f is not None:
-                    chains['spread_' + c] = f(chains[c], chains[c + '_shifted'])
-
-        chains['spread_mark'] = (chains['spread_bid'] + chains['spread_ask']) / 2
-        chains['spread_symbol'] = chains['symbol'] + "-." + chains['symbol_shifted']
-
-        return chains[out_col + ['strike', 'strike_shifted']]
+        return OptionQuery(chains)
 
     @staticmethod
     def iron_condor(chain, **params):
@@ -107,24 +80,16 @@ class OptionStrategies(object):
         if 'c_width' not in params or 'p_width' not in params or 'width' not in params:
             raise ValueError("Must define all widths for iron condor")
 
-        # set the attributes for this option strategy
-        OptionStrategies.iron_condor.option_config = {'option': 4}
-
-        out_col = OptionStrategies.base_out_col
-
-        call_side = OptionStrategies.vertical(chain, width=params['c_width'], option_type=OptionType.CALL)
-        put_side = OptionStrategies.vertical(chain, width=params['p_width'], option_type=OptionType.PUT)
+        call_side = OptionStrategies.vertical(chain, width=params['c_width'], option_type=OptionType.CALL).fetch()
+        put_side = OptionStrategies.vertical(chain, width=params['p_width'], option_type=OptionType.PUT).fetch()
         put_side['strike_key'] = put_side['strike'] + params['width']
 
-        call_side_keys = ['quote_date', 'expiration', 'strike']
-        put_side_keys = ['quote_date', 'expiration', 'strike_key']
+        call_side_keys = ['quote_date', 'expiration', 'root', 'strike']
+        put_side_keys = ['quote_date', 'expiration', 'root', 'strike_key']
 
         chains = call_side.merge(put_side, left_on=call_side_keys, right_on=put_side_keys, suffixes=('_c', '_p'))
 
-        chains['spread_mark'] = chains['spread_mark_c'] + chains['spread_mark_p']
-        chains['spread_symbol'] = chains['spread_symbol_c'] + "+." + chains['spread_symbol_p']
-
-        return chains[out_col + ['strike_c', 'strike_shifted_c', 'strike_p', 'strike_shifted_p']]
+        return OptionQuery(chains)
 
     @staticmethod
     def covered_stock(chain, **params):

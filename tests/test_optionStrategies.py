@@ -5,7 +5,7 @@ import pandas as pd
 from pandas.util.testing import assert_frame_equal
 
 import kaleidoscope as kd
-from kaleidoscope.data import opt_params
+from kaleidoscope.datafeeds.base import opt_params
 from kaleidoscope.globals import OptionType, Period
 from kaleidoscope.options.option_query import OptionQuery
 from kaleidoscope.options.option_strategies import OptionStrategies

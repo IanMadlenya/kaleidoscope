@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import cm
-
-from kaleidoscope.statistics.group_performance import GroupPerformance
+from kaleidoscope.options.iterator.option_chain import OptionChainIterator
 
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('display.max_rows', None)
@@ -46,27 +45,18 @@ class OptionSeries(object):
 
             self.symbol = symbol
             self.strategy = strategy
+            self.data = data
             self.params = params
+            self.index = index
 
-            data.set_index(['expiration'], inplace=True)
-            data.sort_index(inplace=True)
+    def iter_quotes(self):
+        """
+        Return an iterator to iterate through all option chains in the backtesting period
 
-            sym_idx = 0
-            date_idx = 1
-            val_idx = 2
+        :return:
+        """
 
-            if index is not None:
-                # if index list is passed, infer the expiration column from the list
-                sym_idx = index[0]
-                date_idx = index[1]
-                val_idx = index[2]
-
-            for exp, df in data.groupby(level=0):
-                col_names = df.columns.values
-                exp = pd.to_datetime(str(exp)).strftime('%Y-%m-%d')
-
-                df = df.pivot(index=col_names[sym_idx], columns=col_names[date_idx], values=col_names[val_idx]).dropna()
-                self.option_chains[exp] = df if not dropna else df.dropna()
+        return OptionChainIterator(self.data)
 
     def head(self, n=5):
         """

@@ -1,5 +1,5 @@
 class Account(object):
-    def __init__(self, cash):
+    def __init__(self, cash=10000):
         self.cash = cash
 
     def on_fill(self, event):

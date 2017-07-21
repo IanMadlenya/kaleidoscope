@@ -1,56 +1,32 @@
 import collections
 import itertools
-import time
 import queue
+import time
 
-from .brokers.broker import DefaultBroker
-from .commissions import Commission
-from .sizers.sizer_dollar_amt import SizerDollarAmount
-from .events import EventType
-from .account import Account
-from kaleidoscope.data import get
+from kaleidoscope.brokers.broker import DefaultBroker
+from kaleidoscope.datafeeds.sqlite_data import SQLiteDataFeed
+from kaleidoscope.sizers.sizers import FixedQuantitySizer
+from kaleidoscope.commissions import Commission
+from kaleidoscope.account import Account
+from kaleidoscope.event import EventType
 
 
 class Backtest(object):
-    def __init__(self, broker=None, cash=10000, commissions=None, sizer=None):
+    def __init__(self, broker=DefaultBroker,
+                 data=SQLiteDataFeed,
+                 data_path=None
+                 ):
 
+        # setup backtest private variables
         self.data = None
-        self.cash = cash
-        self.broker = DefaultBroker if broker is None else broker
-        self.account = Account
-        self.comm = Commission.default_commissions if commissions is None else commissions
-        self.sizer = SizerDollarAmount if sizer is None else sizer
-
         self.strats = list()
-        self.events_queue = queue.Queue()
+        self.queue = queue.Queue()
 
-    def add_data(self, data):
-        """
-        Takes an OptionSeries object returned by internal 'get' method
-        and assigns to backtest as data attribute.
-
-        :param data: The data (OptionSeries) to use for this backtest session
-        """
-        self.data = data
-
-    def get_data(self, ticker, start, end,
-                 provider=None, path=None,
-                 include_splits=False, option_type=None):
-        """
-        Calls the internal 'get' method to retrieve option chain data from
-        data source and stores it in this instance of backtester.
-
-        :param ticker: the symbol to download
-        :param start: expiration start date of downloaded data
-        :param end: expiration end date of downloaded data
-        :param provider: The data source to use for downloading data, reference to function
-                         Defaults to sqlite database
-        :param path: Path to the data source
-        :param include_splits: Should data exclude options created from the underlying's stock splits
-        :param option_type: If None, or not passed in, will retrieve both calls and puts of option chain
-        :return: Dataframe containing all option chains as filtered by algo for the specified date range
-        """
-        self.data = get(ticker, start, end, provider, path, include_splits, option_type)
+        # initialize backtest configuration
+        self.account = Account()
+        self.datafeed = data(data_path)
+        self.broker = broker(self.account, self.datafeed, self.queue)
+        self.sizer = FixedQuantitySizer()
 
     def add_strategy(self, strategy, **kwargs):
         """
@@ -139,12 +115,6 @@ class Backtest(object):
 
     def run(self):
 
-        self.account = self.account(self.cash)
-        self.sizer = self.sizer()
-
-        # initialize broker with data
-        self.broker = self.broker()
-
         # program timer
         program_starts = time.time()
 
@@ -152,26 +122,27 @@ class Backtest(object):
             # initialize a new instance strategy from the strategy list
             # this step will create the necessary spread prices from option data
             # and store it in the broker's strat_data list containing OptionSeries objects
-            strategy = scenario[0](self.broker, **scenario[1])
+            strategy = scenario[0](self.broker, self.account, self.queue, **scenario[1])
+            self.broker.continue_backtest = True
 
-            # run backtesting loop
-            try:
-                event = self.events_queue.get(False)
-            except queue.Empty:
-                self.broker.stream_next()
-            else:
-                if event is not None:
-                    if event.type == EventType.BAR:
-                        strategy.on_data(event)
-                        self.account.update_account(event)
-                        # self.statistics.update(event.time, self.portfolio_handler)
-                    elif event.type == EventType.ORDER:
-                        self.broker.execute_order(event)
-                    elif event.type == EventType.FILL:
-                        self.account.on_fill(event)
-                    else:
-                        raise NotImplemented("Unsupported event.type '%s'" % event.type)
+            while self.broker.continue_backtest:
+                # run backtesting loop
+                try:
+                    event = self.queue.get(False)
+                except queue.Empty:
+                    self.broker.stream_next()
+                else:
+                    if event is not None:
+                        if event.type == EventType.DATA:
+                            strategy.on_data(event)
+                            self.account.update_account(event)
+                        elif event.type == EventType.ORDER:
+                            self.broker.execute_order(event)
+                        elif event.type == EventType.FILL:
+                            self.account.on_fill(event)
+                            strategy.on_fill_event(event)
+                        else:
+                            raise NotImplementedError("Unsupported event.type '%s'" % event.type)
 
-        print(len(self.broker.strat_data))
         program_ends = time.time()
         print("The simulation ran for {0} seconds.".format(round(program_ends - program_starts, 2)))

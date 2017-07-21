@@ -1,4 +1,6 @@
 class Commission(object):
+    def __init__(self):
+        pass
 
     @staticmethod
     def default_commissions(quantity, legs):

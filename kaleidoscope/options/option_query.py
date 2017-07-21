@@ -21,15 +21,14 @@ class OptionQuery(object):
     def __init__(self, option_chain, inplace=False):
         # Create a copy of the option chain dataframe to prevent modifying
         # the original dataframe and to able to reuse it for other queries
-        self.option_chain = option_chain if not inplace else option_chain.copy()
-
+        self.option_chain = option_chain.copy() if not inplace else option_chain
         self.option_chain.reset_index(drop=True, inplace=True)
 
         # create t_delta column if not present
         if 't_delta' not in self.option_chain.columns:
             # convert date columns to pandas datetime
-            self.option_chain['quote_date'] = pd.to_datetime(self.option_chain['quote_date'])
-            self.option_chain['expiration'] = pd.to_datetime(self.option_chain['expiration'])
+            self.option_chain.loc[:, 'quote_date'] = pd.to_datetime(self.option_chain['quote_date'])
+            self.option_chain.loc[:, 'expiration'] = pd.to_datetime(self.option_chain['expiration'])
 
             # calculate the difference between expiration date and quote date
             t_delta = self.option_chain['expiration'] - self.option_chain['quote_date']
@@ -215,6 +214,8 @@ class OptionQuery(object):
         if 'underlying_price' in self.option_chain.columns:
             dates = self.option_chain['underlying_price'].unique()
             return dates.mean()
+        else:
+            return OptionQuery(self.option_chain)
 
     # PRIVATE METHODS ===============================================================================
 

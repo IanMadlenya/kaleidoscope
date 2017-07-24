@@ -1,4 +1,5 @@
 import pandas as pd
+import re
 
 
 def generate_symbol(sym, exp, strike, opt_type):
@@ -15,3 +16,14 @@ def generate_symbol(sym, exp, strike, opt_type):
     strike = "{0:0>8}".format(int(strike * 1000))
     
     return "%s%s%s%s" % (sym, expiration, opt_type, strike)
+
+
+def parse_symbol(sym):
+    """
+    Parse an option symbol and return its components
+    :param sym: the symbol to parse
+    :return: group object with various parts of the symbol parsed
+    """
+
+    matcher = re.compile(r'^(.+)([0-9]{6})([PC])([0-9]+)$')
+    return matcher.search(sym)

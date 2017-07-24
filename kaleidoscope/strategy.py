@@ -2,6 +2,7 @@ import datetime
 from kaleidoscope.globals import OrderType
 from kaleidoscope.event import OrderEvent
 from kaleidoscope.sizers.sizers import FixedQuantitySizer
+from kaleidoscope.order import Order
 
 
 class Strategy(object):
@@ -94,23 +95,24 @@ class Strategy(object):
     def stop(self):
         pass
 
-    def buy(self, options, order_type=OrderType.MKT, quantity=None):
+    def buy(self, order, order_type=OrderType.MKT, quantity=None):
         """
         Create a buy signal event and place it in the queue
 
-        :param options:
+        :param order:
         :param order_type:
         :param quantity:
         :return:
         """
         if quantity <= 0:
             raise ValueError("Quantity cannot be less than 1")
-
-        if quantity is None:
+        elif quantity is None:
             # use sizer to determine quantity
-            quantity = self.sizer.order_size(self.account, )
+            quantity = self.sizer.order_size(self.account, order)
 
-        event = OrderEvent(options, order_type, quantity)
+        # create an new order and place it in the queue
+        # order = Order(order)
+        event = OrderEvent(Order(options, order_type, quantity))
 
         self.queue.put(event)
 

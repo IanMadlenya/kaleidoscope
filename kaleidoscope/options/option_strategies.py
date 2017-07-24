@@ -4,7 +4,7 @@ import pandas as pd
 
 from kaleidoscope.globals import OptionType, Period
 from kaleidoscope.options.option_query import OptionQuery
-from kaleidoscope.options.option_series import OptionSeries
+from kaleidoscope.options.option_strategy import OptionStrategy
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
@@ -27,7 +27,31 @@ class OptionStrategies(object):
         chains = OptionQuery(chain).option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
-        return chains
+        chains['symbol'] = '.' + chains['symbol']
+
+        chains['mark'] = (chains['bid'] + chains['ask']) / 2
+
+        chains['volume'] = chains['trade_volume']
+
+        new_col = ['symbol', 'quote_date', 'expiration', 'volume', 'mark']
+
+        if 'delta' in chains.columns:
+            new_col.append('delta')
+
+        if 'theta' in chains.columns:
+            new_col.append('theta')
+
+        if 'gamma' in chains.columns:
+            new_col.append('gamma')
+
+        if 'vega' in chains.columns:
+            new_col.append('vega')
+
+        if 'rho' in chains.columns:
+            new_col.append('rho')
+
+        chains = chains[new_col]
+        return OptionStrategy(chains)
 
     @staticmethod
     def vertical(chain, **params):
@@ -47,8 +71,10 @@ class OptionStrategies(object):
             raise ValueError("Must provide option_type and width parameters for vertical spreads")
         elif params['width'] <= 0:
             raise ValueError("Width of vertical spreads cannot be less than or equal 0")
+        elif not isinstance(chain, OptionQuery):
+            raise ValueError("Parameter 'chain' must be of OptionQuery type")
 
-        chains = OptionQuery(chain).option_type(params['option_type'])
+        chains = chain.option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
         # shift only the strikes since this is a vertical spread
@@ -58,7 +84,38 @@ class OptionStrategies(object):
 
         chains = chains.merge(chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
 
-        return OptionQuery(chains)
+        chains['symbol'] = '.' + chains['symbol'] + '-.' + chains['symbol_shifted']
+
+        chains['mark'] = ((chains['bid'] - chains['ask_shifted']) +
+                          (chains['ask'] - chains['bid_shifted'])) / 2
+
+        chains['volume'] = chains['trade_volume'] + chains['trade_volume_shifted']
+
+        new_col = ['symbol', 'quote_date', 'expiration', 'volume', 'mark']
+
+        if 'delta' in chains.columns:
+            chains['delta'] = chains['delta'] - chains['delta_shifted']
+            new_col.append('delta')
+
+        if 'theta' in chains.columns:
+            chains['theta'] = chains['theta'] - chains['theta_shifted']
+            new_col.append('theta')
+
+        if 'gamma' in chains.columns:
+            chains['gamma'] = chains['gamma'] - chains['gamma_shifted']
+            new_col.append('gamma')
+
+        if 'vega' in chains.columns:
+            chains['vega'] = chains['vega'] - chains['vega_shifted']
+            new_col.append('vega')
+
+        if 'rho' in chains.columns:
+            chains['rho'] = chains['rho'] - chains['rho_shifted']
+            new_col.append('rho')
+
+        chains = chains[new_col]
+
+        return OptionStrategy(chains)
 
     @staticmethod
     def iron_condor(chain, **params):
@@ -80,8 +137,8 @@ class OptionStrategies(object):
         if 'c_width' not in params or 'p_width' not in params or 'width' not in params:
             raise ValueError("Must define all widths for iron condor")
 
-        call_side = OptionStrategies.vertical(chain, width=params['c_width'], option_type=OptionType.CALL).fetch()
-        put_side = OptionStrategies.vertical(chain, width=params['p_width'], option_type=OptionType.PUT).fetch()
+        call_side = OptionStrategies.vertical(chain, width=params['c_width'], option_type=OptionType.CALL)
+        put_side = OptionStrategies.vertical(chain, width=params['p_width'], option_type=OptionType.PUT)
         put_side['strike_key'] = put_side['strike'] + params['width']
 
         call_side_keys = ['quote_date', 'expiration', 'root', 'strike']
@@ -89,7 +146,7 @@ class OptionStrategies(object):
 
         chains = call_side.merge(put_side, left_on=call_side_keys, right_on=put_side_keys, suffixes=('_c', '_p'))
 
-        return OptionQuery(chains)
+        return OptionStrategy(chains)
 
     @staticmethod
     def covered_stock(chain, **params):

@@ -48,3 +48,5 @@ class OptionType(Enum):
 OrderType = Enum("OrderType", "MKT, LMT")
 
 SecType = Enum("SecType", "STK OPT")
+
+OrderStatus = Enum("OrderStatus", "CREATED, ACCEPTED, WORKING, FILLED, DELETED")

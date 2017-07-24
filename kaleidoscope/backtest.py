@@ -26,7 +26,7 @@ class Backtest(object):
         self.account = Account()
         self.datafeed = data(data_path)
         self.broker = broker(self.account, self.datafeed, self.queue)
-        self.sizer = FixedQuantitySizer()
+        self.sizer = FixedQuantitySizer(self.account)
 
     def add_strategy(self, strategy, **kwargs):
         """

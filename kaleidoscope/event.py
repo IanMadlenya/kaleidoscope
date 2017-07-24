@@ -32,7 +32,7 @@ class DataEvent(Event):
         """
         self.type = EventType.DATA
         self.date = date
-        self.quotes = OptionQuery(quotes)
+        self.quotes = quotes
 
 
 class OrderEvent(Event):

@@ -12,33 +12,35 @@ class SampleStrategy(kd.Strategy):
         self.set_cash(10000)
         self.set_start_date(2016, 2, 19)
         self.set_end_date(2016, 2, 19)
-        self.add_option("VXX")
+
+        # if strategy will execute only one type of option spread, specify
+        # the strategy with strategy param in add_option method to improve performance
+        self.add_option(self.symbol)
 
     def on_data(self, data):
-        # filter for call spreads currently price closest to specified price
-        # expiring within seven weeks
-        chain = (data
-                 .calls()
-                 .lte('expiration', kd.Period.SEVEN_WEEKS)
-                 )
+        # Data param is an OptionQuery object
+        if not self.account.has_positions():
+            call_spreads = kd.OptionStrategies.vertical(data.quotes,
+                                                        option_type=kd.OptionType.CALL,
+                                                        width=self.width,
+                                                        DTE=self.DTE
+                                                        )
 
-        # construct call spreads with current day's quotes
-        call_spreads = (kd.OptionStrategies.vertical(chain.fetch(), width=self.width)
-                        .closest('spread_mark', self.price)
-                        )
+            call_spread = kd.OptionQuery(call_spreads).closest('spread_mark', self.price).fetch()
 
-        # we sell the spread using a default market order,
-        # quantity will be determined automatically by sizer
-        # unless quantity is specified
-        self.sell(call_spreads, quantity=10)
+            # we sell the spread using a default market order,
+            # quantity will be determined automatically by sizer
+            # unless quantity is specified
+            self.sell(call_spread, quantity=10)
 
 
 # initialize the backtest
 bt = kd.Backtest(data=kd.datafeeds.SQLiteDataFeed)
 bt.add_opt_strategy(SampleStrategy,
                     symbol=("VXX",),
+                    DTE=(kd.Period.SEVEN_WEEKS,),
                     width=range(1, 6),
-                    price=(0.5, 0.75, 1)
+                    price=(0.5, 1)
                     )
 bt.run()
 

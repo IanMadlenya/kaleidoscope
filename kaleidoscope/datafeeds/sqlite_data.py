@@ -11,9 +11,9 @@ class SQLiteDataFeed(AbstractDataFeed):
 
         self.opt_params = (
             ('symbol', 0),
-            ('underlying_symbol', 1),
+            ('underlying_symbol', -1),
             ('quote_date', 2),
-            ('root', -1),
+            ('root', 1),
             ('expiration', 4),
             ('strike', 5),
             ('option_type', 6),
@@ -28,11 +28,11 @@ class SQLiteDataFeed(AbstractDataFeed):
             ('ask', 15),
             ('underlying_price', 16),
             ('iv', -1),
-            ('delta', -1),
-            ('gamma', -1),
-            ('theta', -1),
-            ('vega', -1),
-            ('rho', -1),
+            ('delta', 18),
+            ('gamma', 19),
+            ('theta', 20),
+            ('vega', 21),
+            ('rho', 22),
             ('open_interest', -1)
         )
 

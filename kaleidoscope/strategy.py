@@ -16,9 +16,10 @@ class Strategy(object):
     def __init__(self, broker, account, queue, **params):
         self.broker = broker
         self.account = account
-        self.date = None
+        self.current_date = None
 
         self.queue = queue
+        self.order_list = list()
 
         self.start_date = None
         self.end_date = None
@@ -115,12 +116,18 @@ class Strategy(object):
             raise ValueError("Action must be of type OrderAction")
 
         ticket = self.generate_ticket()
+
         if quantity is None:
             # use sizer to determine quantity
             quantity = self.sizer.order_size(order, action)
+
         # create an new order and place it in the queue
-        event = OrderEvent(ticket, self.date, order, action, quantity)
+        event = OrderEvent(ticket, self.current_date, order, action, quantity)
         self.queue.put(event)
+
+        # add the ticket into the order list for tracking
+        self.order_list.append(ticket)
+
         return ticket
 
     def close_order(self, ticket, price=None):

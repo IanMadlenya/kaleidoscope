@@ -134,8 +134,8 @@ class Backtest(object):
                 else:
                     if event is not None:
                         if event.type == EventType.DATA:
-                            strategy.date = event.date
-                            strategy.on_data(event)
+                            strategy.current_date = event.date
+                            strategy.on_data(event.quotes)
                             self.account.update_account(event)
                         elif event.type == EventType.ORDER:
                             self.broker.execute_order(event)

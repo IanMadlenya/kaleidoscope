@@ -21,8 +21,7 @@ class OptionLeg(OrderLeg):
 
     def __init__(self, option, quantity):
         self.sec_type = SecType.OPT
-        self.option = option
-        super().__init__(quantity, self.option)
+        super().__init__(quantity, option)
 
 
 class StockLeg(OrderLeg):
@@ -30,5 +29,4 @@ class StockLeg(OrderLeg):
 
     def __init__(self, symbol, quantity):
         self.sec_type = SecType.STK
-        self.symbol = symbol
-        super().__init__(quantity, self.symbol)
+        super().__init__(quantity, symbol)

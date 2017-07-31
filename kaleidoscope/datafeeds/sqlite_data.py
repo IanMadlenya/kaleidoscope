@@ -11,7 +11,7 @@ class SQLiteDataFeed(AbstractDataFeed):
 
         self.opt_params = (
             ('symbol', 0),
-            ('underlying_symbol', -1),
+            ('underlying_symbol', 1),
             ('quote_date', 2),
             ('root', 1),
             ('expiration', 4),

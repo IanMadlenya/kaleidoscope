@@ -3,6 +3,7 @@
 """
 Class to represent an option
 """
+import datetime
 import numpy as np
 
 
@@ -12,10 +13,23 @@ class Option(object):
     methods and creates an option object.
     """
 
-    def __init__(self, kwargs):
-        for k in kwargs:
-            setattr(self, k, kwargs[k])
+    def __init__(self, symbol, expiration, option_type, strike,
+                 bid=0, ask=0, delta=0, theta=0,
+                 gamma=0, vega=0, rho=0
+                 ):
+        self.symbol = symbol
 
-    def get_mark_price(self):
-        """ get the option's mark price """
-        return np.mean([self.bid, self.ask])
+        exp = datetime.datetime.strptime(expiration, "%y%m%d")
+        self.expiration = exp.strftime("%Y-%m-%d")
+
+        self.option_type = option_type
+        self.strike = int(strike) / 1000
+
+        self.bid = bid
+        self.ask = ask
+
+        self.delta = delta
+        self.theta = theta
+        self.gamma = gamma
+        self.vega = vega
+        self.rho = rho

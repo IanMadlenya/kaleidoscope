@@ -1,8 +1,9 @@
 import datetime
-from kaleidoscope.globals import OrderType
+import random
+from kaleidoscope.globals import OrderAction
 from kaleidoscope.event import OrderEvent
 from kaleidoscope.sizers.sizers import FixedQuantitySizer
-from kaleidoscope.order import Order
+from kaleidoscope.options.option_strategy import OptionStrategy
 
 
 class Strategy(object):
@@ -15,6 +16,7 @@ class Strategy(object):
     def __init__(self, broker, account, queue, **params):
         self.broker = broker
         self.account = account
+        self.date = None
 
         self.queue = queue
 
@@ -95,39 +97,37 @@ class Strategy(object):
     def stop(self):
         pass
 
-    def buy(self, order, order_type=OrderType.MKT, quantity=None):
+    def place_order(self, order, action, quantity=None):
         """
         Create a buy signal event and place it in the queue
 
-        :param order:
-        :param order_type:
-        :param quantity:
+        :param order: OptionStrategy object containing option legs of an option strategy
+        :param action:
+        :param price:
+        :param order_type: The action of the order, BUY or SELL
+        :param tif:
+        :param quantity: The amount to transaction, > 0 for buy < 0 for sell
         :return:
         """
-        if quantity <= 0:
-            raise ValueError("Quantity cannot be less than 1")
-        elif quantity is None:
+        if not isinstance(order, OptionStrategy):
+            raise ValueError("Order param must be of type OptionStrategy")
+        elif not isinstance(action, OrderAction):
+            raise ValueError("Action must be of type OrderAction")
+
+        ticket = self.generate_ticket()
+        if quantity is None:
             # use sizer to determine quantity
-            quantity = self.sizer.order_size(self.account, order)
-
+            quantity = self.sizer.order_size(order, action)
         # create an new order and place it in the queue
-        # order = Order(order)
-        event = OrderEvent(Order(options, order_type, quantity))
-
+        event = OrderEvent(ticket, self.date, order, action, quantity)
         self.queue.put(event)
+        return ticket
 
-    def sell(self, options, order_type=OrderType.MKT, quantity=None):
-        """
-        Create a sell order event and place it in the queue
-        :param options:
-        :param order_type:
-        :param quantity:
-        :return:
-        """
-        pass
-
-    def close(self):
+    def close_order(self, ticket, price=None):
         pass
 
     def cancel(self):
         pass
+
+    def generate_ticket(self):
+        return random.randint(100000, 999999)

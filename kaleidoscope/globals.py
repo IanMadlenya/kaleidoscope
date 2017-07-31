@@ -35,10 +35,9 @@ class Period(Enum):
     SEVEN_WEEKS = 49
 
 
-class Action(Enum):
+class OrderAction(Enum):
     BUY = 1
     SELL = -1
-
 
 class OptionType(Enum):
     CALL = ('c', 1)
@@ -50,3 +49,5 @@ OrderType = Enum("OrderType", "MKT, LMT")
 SecType = Enum("SecType", "STK OPT")
 
 OrderStatus = Enum("OrderStatus", "CREATED, ACCEPTED, WORKING, FILLED, DELETED")
+
+OrderTIF = Enum("OrderTIF", "GTC, DAY")

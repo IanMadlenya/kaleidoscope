@@ -1,5 +1,5 @@
 from enum import Enum
-from kaleidoscope.options.option_query import OptionQuery
+from datetime import datetime
 
 EventType = Enum("EventType", "DATA ORDER FILL")
 
@@ -42,29 +42,45 @@ class OrderEvent(Event):
     and quantity.
     """
 
-    def __init__(self, symbol, action, quantity):
+    def __init__(self, ticket, date, order, action, quantity):
         """
         Initialises the OrderEvent.
 
-        Parameters:
-        ticker - The ticker symbol, e.g. 'GOOG'.
-        action - 'BOT' (for long) or 'SLD' (for short).
-        quantity - The quantity of shares to transact.
+        :param order:
+        :param action:
+        :param order_type:
+        :param tif:
+        :param quantity:
         """
+        self.ticket = ticket
         self.type = EventType.ORDER
-        self.symbol = symbol
+        self.date = date
+        self.order = order
         self.action = action
         self.quantity = quantity
+
+        self.print_order()
 
     def print_order(self):
         """
         Outputs the values within the OrderEvent.
         """
-        print(
-            "Order: Symbol=%s, Action=%s, Quantity=%s" % (
-                self.symbol, self.action, self.quantity
-            )
-        )
+        t = self.ticket
+        d = self.date
+        a = self.action.name
+        q = self.quantity
+        m = self.order.mark
+        n = self.order.name
+        s = self.order.underlying_symbol
+
+        exps = self.order.expirations
+        p_e = [datetime.strptime(exp, "%Y-%m-%d") for exp in exps]
+        e = "".join('%s/' % p.strftime('%d %b %y') for p in p_e)[0: -1]
+
+        sts = self.order.strikes
+        st = "".join('%s/' % '{0:g}'.format(st) for st in sts)[0: -1]
+
+        print(f"Date: {d} Order #{t}: {a} {q} @ {m:.2f} {n} {s} {e} {st}")
 
 
 class FillEvent(Event):

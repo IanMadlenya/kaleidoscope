@@ -1,20 +1,22 @@
 # pylint: disable=E1101
-import numpy as np
-import pandas as pd
+import datetime
+import re
 
 from kaleidoscope.options.order_leg import OptionLeg, StockLeg
-from kaleidoscope.globals import SecType, OrderType
+from kaleidoscope.globals import OrderAction
+from kaleidoscope.helpers import parse_symbol
 from kaleidoscope.options.option_query import OptionQuery
+from kaleidoscope.options.option import Option
 
 
 class OptionStrategy(object):
     """
-    This class holds information regarding an option strategy that is
-    being traded. This class will generate a human readable name for
-    reference and contain the option legs that make up the option strategy
+    This class holds all constructed option strategies created from OptionStrategies
+    class' static methods. The provided convenience methods will return a single strategy
+    that matches the method requirements.
     """
 
-    def __init__(self, chains):
+    def __init__(self, chains, name=None):
         """
         This class holds an instance of an option strategy and it's
         components and provides methods to manipulate the option legs
@@ -23,39 +25,119 @@ class OptionStrategy(object):
         :params: chains: Dataframe containing shifted columns representing an option leg
         """
         self.chains = chains
-        self.legs = list()
+        self.name = name
 
-    def _map(self, spread):
-        """
-        Map the dataframe columns to its corresponding option leg
-        
-        :param chains: Dataframe containing columns of option legs
-        :return: 
-        """
-        pass
+        if self.chains is not None:
+            self.underlying_symbol = chains['underlying_symbol'][0]
 
-    def parse_strategy(strat_sym):
+        # attributes to be filled when 'nearest' methods are used
+        self.legs = None
+        self.expirations = None
+        self.strikes = None
+        self.option_types = None
+        self.mark = None
+
+    def _map(self, strat_sym):
         """
-        Parse the strategy symbols which is made up of multiple option symbols
-        :param strat_sym: option symbol representing the option strategy, eg. VXX160219C00035000
+        Takes an array or parsed option spread symbol and create option legs
+        as per symbol's arrangement
+
+        :param sym_array: Array containing the components of an option spread's symbol
         :return:
         """
-        pass
 
-    def mark_nearest(self, price):
+        trimmed_sym = strat_sym.replace(".", "")
+        parsed = re.findall('\W+|\w+', trimmed_sym)
+
+        strat_legs = list()
+        exps = list()
+        strikes = list()
+
+        # default mapping for each option symbol
+        quantity = 1
+        side = OrderAction.BUY
+
+        for piece in parsed:
+            if piece == "+":
+                side = OrderAction.BUY
+                continue
+            elif piece == "-":
+                side = OrderAction.SELL
+                continue
+            else:
+                # TODO: use regex to parse quantity, stock/option symbol
+                try:
+                    quantity = int(piece)
+                    continue
+                except ValueError:
+                    pass
+
+            if len(piece) == 18:
+                # this is an option symbol, parse it
+                sym_group = parse_symbol(piece)
+                exp = sym_group[2]
+                option_type = sym_group[3]
+                strike = sym_group[4]
+
+                option = Option(symbol=piece, expiration=exp, option_type=option_type, strike=strike)
+
+                if option.expiration not in exps:
+                    exps.append(option.expiration)
+
+                if option.strike not in strikes:
+                    strikes.append(option.strike)
+
+                strat_legs.append(OptionLeg(option, quantity=quantity * side.value))
+
+                quantity = 1
+                side = OrderAction.BUY
+
+        self.expirations = exps
+        self.strikes = strikes
+
+        return strat_legs
+
+    def nearest_mark(self, mark, tie='roundup'):
         """
-        Returns a
+        Returns the object itself with the legs attribute containing the option legs
+        that matches the mark value and 'expiration', 'strikes' and 'symbol' attributes
+        assigned.
+
+        :param mark: Mark value to match option spread with
+        :param tie: how to handle multiple matches for mark value
+        :return: Self
+        """
+        spread = OptionQuery(self.chains).closest('mark', mark).fetch()
+
+        if len(spread) != 1:
+            max_mark_idx = spread['mark'].idxmax()
+            min_mark_idx = spread['mark'].idxmin()
+
+            if tie == 'roundup':
+                self.legs = self._map(spread['symbol'][max_mark_idx])
+                self.mark = spread['mark'][max_mark_idx]
+            else:
+                self.legs = self._map(spread['symbol'][min_mark_idx])
+                self.mark = spread['mark'][min_mark_idx]
+        else:
+            self.legs = self._map(spread['symbol'][0])
+            self.mark = spread['mark'][0]
+
+        return self
+
+    def nearest_delta(self, price):
+        """
+
         :param price:
         :return:
         """
-        spread = OptionQuery(self.chains).closest('spread_mark', price)
-        return self._map(spread)
-
-    def mark_nearest_above(self, price):
         pass
 
-    def mark_nearest_below(self, price):
-        pass
+    def filter(self, func, **params):
+        """
 
-    def fetch(self):
-        return self.chains
+        :param func:
+        :param params:
+        :return:
+        """
+        pass

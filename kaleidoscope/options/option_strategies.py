@@ -14,44 +14,27 @@ class OptionStrategies(object):
     """
     Static methods to define option strategies
     """
-
     @staticmethod
     def single(chain, **params):
 
         if 'option_type' not in params:
             raise ValueError("Must provide option_type for single option")
 
-        # set the attributes for this option strategy
-        OptionStrategies.single.option_config = {'option': 1}
-
         chains = OptionQuery(chain).option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
 
         chains['symbol'] = '.' + chains['symbol']
-
         chains['mark'] = (chains['bid'] + chains['ask']) / 2
-
         chains['volume'] = chains['trade_volume']
 
-        new_col = ['symbol', 'quote_date', 'expiration', 'volume', 'mark']
+        new_col = ['symbol', 'underlying_symbol', 'quote_date', 'expiration', 'volume', 'mark']
 
-        if 'delta' in chains.columns:
-            new_col.append('delta')
+        for greek in ['delta', 'theta', 'gamma', 'vega', 'rho']:
+            if greek in chains.columns:
+                chains[greek] = chains[greek] - chains[greek + "_shifted"]
+                new_col.append(greek)
 
-        if 'theta' in chains.columns:
-            new_col.append('theta')
-
-        if 'gamma' in chains.columns:
-            new_col.append('gamma')
-
-        if 'vega' in chains.columns:
-            new_col.append('vega')
-
-        if 'rho' in chains.columns:
-            new_col.append('rho')
-
-        chains = chains[new_col]
-        return OptionStrategy(chains)
+        return OptionStrategy(chains[new_col], "Single")
 
     @staticmethod
     def vertical(chain, **params):
@@ -85,37 +68,17 @@ class OptionStrategies(object):
         chains = chains.merge(chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
 
         chains['symbol'] = '.' + chains['symbol'] + '-.' + chains['symbol_shifted']
-
-        chains['mark'] = ((chains['bid'] - chains['ask_shifted']) +
-                          (chains['ask'] - chains['bid_shifted'])) / 2
-
+        chains['mark'] = ((chains['bid'] - chains['ask_shifted']) + (chains['ask'] - chains['bid_shifted'])) / 2
         chains['volume'] = chains['trade_volume'] + chains['trade_volume_shifted']
 
-        new_col = ['symbol', 'quote_date', 'expiration', 'volume', 'mark']
+        new_col = ['symbol', 'underlying_symbol', 'quote_date', 'expiration', 'volume', 'mark']
 
-        if 'delta' in chains.columns:
-            chains['delta'] = chains['delta'] - chains['delta_shifted']
-            new_col.append('delta')
+        for greek in ['delta', 'theta', 'gamma', 'vega', 'rho']:
+            if greek in chains.columns:
+                chains[greek] = chains[greek] - chains[greek + "_shifted"]
+                new_col.append(greek)
 
-        if 'theta' in chains.columns:
-            chains['theta'] = chains['theta'] - chains['theta_shifted']
-            new_col.append('theta')
-
-        if 'gamma' in chains.columns:
-            chains['gamma'] = chains['gamma'] - chains['gamma_shifted']
-            new_col.append('gamma')
-
-        if 'vega' in chains.columns:
-            chains['vega'] = chains['vega'] - chains['vega_shifted']
-            new_col.append('vega')
-
-        if 'rho' in chains.columns:
-            chains['rho'] = chains['rho'] - chains['rho_shifted']
-            new_col.append('rho')
-
-        chains = chains[new_col]
-
-        return OptionStrategy(chains)
+        return OptionStrategy(chains[new_col], "Vertical")
 
     @staticmethod
     def iron_condor(chain, **params):
@@ -136,17 +99,57 @@ class OptionStrategies(object):
 
         if 'c_width' not in params or 'p_width' not in params or 'width' not in params:
             raise ValueError("Must define all widths for iron condor")
+        elif params['width'] <= 0 or params['c_width'] <= 0 or params['p_width'] <= 0:
+            raise ValueError("Widths cannot be less than or equal 0")
+        elif not isinstance(chain, OptionQuery):
+            raise ValueError("Parameter 'chain' must be of OptionQuery type")
 
-        call_side = OptionStrategies.vertical(chain, width=params['c_width'], option_type=OptionType.CALL)
-        put_side = OptionStrategies.vertical(chain, width=params['p_width'], option_type=OptionType.PUT)
+        chains = chain.lte('expiration', params['DTE']) if 'DTE' in params else chain
+
+        call_chains = chains.calls().fetch()
+        put_chains = chains.puts().fetch()
+
+        # shift only the strikes since this is a vertical spread
+        call_chains['strike_key'] = call_chains['strike'] + (params['c_width'] * OptionType.CALL.value[1])
+        put_chains['strike_key'] = put_chains['strike'] + (params['p_width'] * OptionType.PUT.value[1])
+
+        left_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike_key']
+        right_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike']
+
+        # CALL SIDE ===================================================================================================
+        call_side = call_chains.merge(call_chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
+
+        call_side['symbol'] = '.' + call_side['symbol'] + '-.' + call_side['symbol_shifted']
+        call_side['mark'] = ((call_side['bid'] - call_side['ask_shifted']) +
+                             (call_side['ask'] - call_side['bid_shifted'])) / 2
+        call_side['volume'] = call_side['trade_volume'] + call_side['trade_volume_shifted']
+
+        # PUT SIDE ====================================================================================================
+        put_side = put_chains.merge(put_chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
+
+        put_side['symbol'] = '.' + put_side['symbol'] + '-.' + put_side['symbol_shifted']
+        put_side['mark'] = ((put_side['bid'] - put_side['ask_shifted']) +
+                            (put_side['ask'] - put_side['bid_shifted'])) / 2
+        put_side['volume'] = put_side['trade_volume'] + put_side['trade_volume_shifted']
         put_side['strike_key'] = put_side['strike'] + params['width']
 
-        call_side_keys = ['quote_date', 'expiration', 'root', 'strike']
-        put_side_keys = ['quote_date', 'expiration', 'root', 'strike_key']
+        # MERGED ======================================================================================================
+        call_side_keys = ['quote_date', 'underlying_symbol', 'expiration', 'root', 'strike']
+        put_side_keys = ['quote_date', 'underlying_symbol', 'expiration', 'root', 'strike_key']
 
         chains = call_side.merge(put_side, left_on=call_side_keys, right_on=put_side_keys, suffixes=('_c', '_p'))
+        chains['symbol'] = chains['symbol_c'] + '+' + chains['symbol_p']
+        chains['mark'] = chains['mark_c'] + chains['mark_p']
+        chains['volume'] = chains['trade_volume_c'] + chains['trade_volume_p']
 
-        return OptionStrategy(chains)
+        new_col = ['symbol', 'underlying_symbol', 'quote_date', 'expiration', 'volume', 'mark']
+
+        for greek in ['delta', 'theta', 'gamma', 'vega', 'rho']:
+            if greek in chains.columns:
+                chains[greek] = chains[greek] - chains[greek + "c_shifted"]
+                new_col.append(greek)
+
+        return OptionStrategy(chains[new_col], "Iron Condor")
 
     @staticmethod
     def covered_stock(chain, **params):

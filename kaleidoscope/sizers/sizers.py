@@ -15,10 +15,11 @@ class FixedQuantitySizer(Sizer):
         self.quantity = quantity
         super().__init__(account)
 
-    def order_size(self, signal):
+    def order_size(self, order, action):
         """
         Return default quantity
-        :param signal:
+        :param order:
+        :param action:
         :return:
         """
-        return self.quantity
+        return self.quantity * action.value

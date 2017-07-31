@@ -26,12 +26,11 @@ class SampleStrategy(kd.Strategy):
                                                         DTE=self.DTE
                                                         )
 
-            call_spread = kd.OptionQuery(call_spreads).closest('spread_mark', self.price).fetch()
-
+            contract = call_spreads.nearest_mark(self.price)
             # we sell the spread using a default market order,
             # quantity will be determined automatically by sizer
             # unless quantity is specified
-            self.sell(call_spread, quantity=10)
+            ticket = self.place_order(contract, action=kd.OrderAction.SELL)
 
 
 # initialize the backtest
@@ -39,7 +38,7 @@ bt = kd.Backtest(data=kd.datafeeds.SQLiteDataFeed)
 bt.add_opt_strategy(SampleStrategy,
                     symbol=("VXX",),
                     DTE=(kd.Period.SEVEN_WEEKS,),
-                    width=range(1, 6),
+                    width=(2,),
                     price=(0.5, 1)
                     )
 bt.run()

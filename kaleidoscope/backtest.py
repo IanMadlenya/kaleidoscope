@@ -6,13 +6,16 @@ import time
 from kaleidoscope.brokers.broker import DefaultBroker
 from kaleidoscope.datafeeds.sqlite_data import SQLiteDataFeed
 from kaleidoscope.sizers.sizers import FixedQuantitySizer
-from kaleidoscope.commissions import Commission
+from kaleidoscope.comm import DefaultCommissions
+from kaleidoscope.margin import ThinkOrSwimMargin
 from kaleidoscope.account import Account
 from kaleidoscope.event import EventType
 
 
 class Backtest(object):
     def __init__(self, broker=DefaultBroker,
+                 comm=DefaultCommissions,
+                 margin=ThinkOrSwimMargin,
                  data=SQLiteDataFeed,
                  data_path=None
                  ):
@@ -23,10 +26,10 @@ class Backtest(object):
         self.queue = queue.Queue()
 
         # initialize backtest configuration
-        self.account = Account()
         self.datafeed = data(data_path)
-        self.broker = broker(self.account, self.datafeed, self.queue)
-        self.sizer = FixedQuantitySizer(self.account)
+        self.comm = comm()
+        self.margin = margin()
+        self.broker = broker(self.datafeed, self.comm, self.margin, self.queue)
 
     def add_strategy(self, strategy, **kwargs):
         """
@@ -70,30 +73,6 @@ class Backtest(object):
         for strat in it:
             self.strats.append(strat)
 
-    def add_sizer(self, sizer, **kwargs):
-        """
-        Adds a Sizer that will be applied to any strategy added to backtester.
-        This would be the default sizer for all strategies.
-
-        :param sizer: sizer class
-        :param kwargs: params to pass to sizer
-        :return:
-        """
-
-        # initialize a new instance of specified sizer with kwargs
-        self.sizer = sizer(**kwargs)
-
-    def add_sizer_by_idx(self, idx, sizer, **kwargs):
-        """
-        Adds a Sizer that will be applied to the strategy referenced by the index.
-
-        :param idx: the index referring to the strategy to apply the sizer to
-        :param sizer: sizer class
-        :param kwargs: params to pass to sizer
-        :return:
-        """
-        pass
-
     @staticmethod
     def iterize(iterable):
         """
@@ -120,9 +99,9 @@ class Backtest(object):
 
         for scenario in self.strats:
             # initialize a new instance strategy from the strategy list
-            # this step will create the necessary spread prices from option data
-            # and store it in the broker's strat_data list containing OptionSeries objects
-            strategy = scenario[0](self.broker, self.account, self.queue, **scenario[1])
+            # and an account instance for each scenario
+            self.broker.set_account(Account())
+            strategy = scenario[0](self.broker, self.queue, **scenario[1])
             self.broker.continue_backtest = True
 
             while self.broker.continue_backtest:
@@ -134,13 +113,16 @@ class Backtest(object):
                 else:
                     if event is not None:
                         if event.type == EventType.DATA:
-                            strategy.current_date = event.date
-                            strategy.on_data(event.quotes)
-                            self.account.update_account(event)
+                            # update broker with current data
+                            self.broker.update_data_event(event)
+                            # update strategy instance with current data
+                            strategy.on_data_event(event)
+                            # update account values with current data
+                            self.broker.account.update_account(event)
                         elif event.type == EventType.ORDER:
                             self.broker.execute_order(event)
                         elif event.type == EventType.FILL:
-                            self.account.on_fill(event)
+                            self.broker.account.process_order(event)
                             strategy.on_fill_event(event)
                         else:
                             raise NotImplementedError("Unsupported event.type '%s'" % event.type)

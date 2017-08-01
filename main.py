@@ -30,7 +30,7 @@ class SampleStrategy(kd.Strategy):
             # we sell the spread using a default market order,
             # quantity will be determined automatically by sizer
             # unless quantity is specified
-            self.place_order(contract, action=kd.OrderAction.SELL)
+            self.place_order(contract, action=kd.OrderAction.BUY)
 
 
 # initialize the backtest

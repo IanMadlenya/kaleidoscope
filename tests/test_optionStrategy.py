@@ -12,6 +12,41 @@ class TestOptionStrategy(TestCase):
     def setUp(self):
         self.op_test = OptionStrategy(chains=None)
 
+    def test_max_strike_width_one_strike(self):
+        self.op_test.strikes = [1]
+        max_width = self.op_test._max_strike_width()
+        self.assertEqual(0, max_width)
+
+    def test_max_strike_width_two_strikes(self):
+        self.op_test.strikes = [1, 2.5]
+        max_width = self.op_test._max_strike_width()
+        self.assertEqual(1.5, max_width)
+
+    def test_max_strike_width_three_strikes(self):
+        self.op_test.strikes = [1, 2.5, 4]
+        max_width = self.op_test._max_strike_width()
+        self.assertEqual(1.5, max_width)
+
+        self.op_test.strikes = [1, 2.5, 5]
+        max_width = self.op_test._max_strike_width()
+        self.assertEqual(2.5, max_width)
+
+    def test_max_strike_width_four_strikes(self):
+        self.op_test.strikes = [1, 2.5, 7, 5.5]
+        max_width = self.op_test._max_strike_width()
+        self.assertEqual(1.5, max_width)
+
+        self.op_test.strikes = [1, 2.5, 7.5, 5.5]
+        max_width = self.op_test._max_strike_width()
+        self.assertEqual(2, max_width)
+
+    def test_max_strike_width_invalid_strikes(self):
+        self.op_test.strikes = [1, 2.5, 4, 5.5, 5]
+        self.assertRaises(ValueError, lambda: self.op_test._max_strike_width())
+
+        self.op_test.strikes = []
+        self.assertRaises(ValueError, lambda: self.op_test._max_strike_width())
+
     def test_map_vertical(self):
         # test case for call spread
         sym_1 = ".VXX160219C00030000-.VXX160219C00035000"

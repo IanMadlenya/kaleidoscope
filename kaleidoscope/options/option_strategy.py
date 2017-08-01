@@ -1,5 +1,4 @@
 # pylint: disable=E1101
-import datetime
 import re
 
 from kaleidoscope.options.order_leg import OptionLeg, StockLeg
@@ -36,6 +35,7 @@ class OptionStrategy(object):
         self.strikes = None
         self.option_types = None
         self.mark = None
+        self.max_strike_width = None
 
     def _map(self, strat_sym):
         """
@@ -72,7 +72,7 @@ class OptionStrategy(object):
                 except ValueError:
                     pass
 
-            if len(piece) == 18:
+            if len(piece) >= 18:
                 # this is an option symbol, parse it
                 sym_group = parse_symbol(piece)
                 exp = sym_group[2]
@@ -96,6 +96,25 @@ class OptionStrategy(object):
         self.strikes = strikes
 
         return strat_legs
+
+    def _max_strike_width(self):
+        """
+        Calculate the max strike widths stored in strikes list
+        :return: Max strike width
+        """
+        length = len(self.strikes)
+        if length == 1:
+            return 0
+        elif length == 2:
+            return abs(self.strikes[1] - self.strikes[0])
+        elif length == 3:
+            return max(abs(self.strikes[1] - self.strikes[0]),
+                       abs(self.strikes[2] - self.strikes[1]))
+        elif length == 4:
+            return max(abs(self.strikes[1] - self.strikes[0]),
+                       abs(self.strikes[3] - self.strikes[2]))
+        else:
+            raise ValueError("invalid amounts of strikes in option strategy")
 
     def nearest_mark(self, mark, tie='roundup'):
         """
@@ -123,6 +142,7 @@ class OptionStrategy(object):
             self.legs = self._map(spread['symbol'][0])
             self.mark = spread['mark'][0]
 
+        self.max_strike_width = self._max_strike_width()
         return self
 
     def nearest_delta(self, price):

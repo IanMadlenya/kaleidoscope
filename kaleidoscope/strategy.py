@@ -13,9 +13,9 @@ class Strategy(object):
     based on option greeks and prices.
     """
 
-    def __init__(self, broker, account, queue, **params):
+    def __init__(self, broker, queue, **params):
         self.broker = broker
-        self.account = account
+        self.account = self.broker.account
         self.current_date = None
 
         self.queue = queue
@@ -89,13 +89,31 @@ class Strategy(object):
     def on_init(self, **params):
         raise NotImplementedError
 
+    def on_data_event(self, event):
+        """
+        Acts as a receiver to the data event passed from backtester
+        Set class params from data event and pass data into on_data method.
+
+        :param event: Data event passed from backtester
+        :return: None
+        """
+        self.current_date = event.date
+        self.on_data(event.quotes)
+
     def on_data(self, data):
         raise NotImplementedError
 
-    def on_fill(self, event):
-        pass
+    def on_fill_event(self, event):
+        """
+        Acts as a receiver to the fill event passed from backtester
+        Set class params from fill event and pass data into on_fill method.
 
-    def stop(self):
+        :param event: Fill event passed from backtester
+        :return: None
+        """
+        self.on_fill(event)
+
+    def on_fill(self, event):
         pass
 
     def place_order(self, order, action, quantity=None):
@@ -117,8 +135,8 @@ class Strategy(object):
 
         ticket = self.generate_ticket()
 
+        # use sizer to determine quantity
         if quantity is None:
-            # use sizer to determine quantity
             quantity = self.sizer.order_size(order, action)
 
         # create an new order and place it in the queue

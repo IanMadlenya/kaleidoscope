@@ -10,10 +10,7 @@ class Event(object):
     (inherited) events, that will trigger further events in the
     trading infrastructure.
     """
-
-    @property
-    def typename(self):
-        return self.event_type.name
+    pass
 
 
 class DataEvent(Event):
@@ -59,9 +56,9 @@ class OrderEvent(Event):
         self.action = action
         self.quantity = quantity
 
-        self.print_order()
+        self.print_event()
 
-    def print_order(self):
+    def print_event(self):
         """
         Outputs the values within the OrderEvent.
         """
@@ -80,7 +77,7 @@ class OrderEvent(Event):
         sts = self.order.strikes
         st = "".join('%s/' % '{0:g}'.format(st) for st in sts)[0: -1]
 
-        print(f"Date: {d} Order #{t}: {a} {q} @ {m:.2f} {n} {s} {e} {st}")
+        print(f"Order Event #{t} on: {d}: {q} {a} @{m:.2f} {n} {s} {e} {st}")
 
 
 class FillEvent(Event):
@@ -91,25 +88,50 @@ class FillEvent(Event):
     the commission of the trade from the brokerage.
     """
 
-    def __init__(self, date, symbol,
-                 action, quantity, price,
-                 commission
+    def __init__(self, date, order, ticket,
+                 action, quantity, cost, margin, commission
                  ):
         """
-        Initialises the FillEvent object.
+         Initialises the FillEvent object.
 
-        timestamp - The timestamp when the order was filled.
-        ticker - The ticker symbol, e.g. 'GOOG'.
-        action - 'BOT' (for long) or 'SLD' (for short).
-        quantity - The filled quantity.
-        exchange - The exchange where the order was filled.
-        price - The price at which the trade was filled
-        commission - The brokerage commission for carrying out the trade.
+        :param date:
+        :param order:
+        :param ticket:
+        :param action:
+        :param quantity:
+        :param price:
+        :param commission:
         """
         self.type = EventType.FILL
         self.date = date
-        self.ticker = symbol
+        self.order = order
+        self.mark = self.order.mark
+        self.ticket = ticket
         self.action = action
         self.quantity = quantity
-        self.price = price
+        self.cost = cost
+        self.margin = margin
         self.commission = commission
+
+        self.print_event()
+
+    def print_event(self):
+        """
+        Outputs the values within the OrderEvent.
+        """
+        t = self.ticket
+        d = self.date
+        a = self.action.name
+        q = self.quantity
+        m = self.mark
+        n = self.order.name
+        s = self.order.underlying_symbol
+
+        exps = self.order.expirations
+        p_e = [datetime.strptime(exp, "%Y-%m-%d") for exp in exps]
+        e = "".join('%s/' % p.strftime('%d %b %y') for p in p_e)[0: -1]
+
+        sts = self.order.strikes
+        st = "".join('%s/' % '{0:g}'.format(st) for st in sts)[0: -1]
+
+        print(f"Fill Event #{t} on: {d}: {q} {a} @{m:.2f} {n} {s} {e} {st}")

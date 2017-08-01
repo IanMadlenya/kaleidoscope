@@ -1,11 +1,11 @@
-from .base import AbstractDataFeed
+from .base import BaseDataFeed
 import kaleidoscope.globals as gb
 import os
 import sqlite3
 import pandas as pd
 
 
-class SQLiteDataFeed(AbstractDataFeed):
+class SQLiteDataFeed(BaseDataFeed):
     def __init__(self, path=None):
         self.path = path
 

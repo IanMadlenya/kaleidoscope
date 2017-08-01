@@ -10,6 +10,14 @@ class Account(object):
 
         self.positions = list()
 
+        """
+        self.positions = {'VXX160219C00030000': -20, 'VXX160219C00025000': 20}
+        
+        
+        
+        
+        """
+
     def set_cash(self, amt):
         """
         Set the cash balance of this broker account instance

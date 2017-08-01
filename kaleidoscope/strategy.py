@@ -1,7 +1,8 @@
 import datetime
 import random
-from kaleidoscope.globals import OrderAction
+from kaleidoscope.globals import OrderAction, OrderType, OrderTIF
 from kaleidoscope.event import OrderEvent
+from kaleidoscope.order import Order
 from kaleidoscope.sizers.sizers import FixedQuantitySizer
 from kaleidoscope.options.option_strategy import OptionStrategy
 
@@ -116,43 +117,40 @@ class Strategy(object):
     def on_fill(self, event):
         pass
 
-    def place_order(self, order, action, quantity=None):
+    def place_order(self, strategy, action, quantity=None,
+                    order_tif=OrderTIF.GTC, order_type=OrderType.MKT, price=None):
+
         """
         Create a buy signal event and place it in the queue
 
-        :param order: OptionStrategy object containing option legs of an option strategy
+        :param strategy: OptionStrategy object containing option legs of an option strategy
         :param action:
         :param price:
         :param order_type: The action of the order, BUY or SELL
-        :param tif:
+        :param order_tif:
         :param quantity: The amount to transaction, > 0 for buy < 0 for sell
         :return:
         """
-        if not isinstance(order, OptionStrategy):
-            raise ValueError("Order param must be of type OptionStrategy")
+        if not isinstance(strategy, OptionStrategy):
+            raise ValueError("Strategy param must be of type OptionStrategy")
         elif not isinstance(action, OrderAction):
             raise ValueError("Action must be of type OrderAction")
 
-        ticket = self.generate_ticket()
-
         # use sizer to determine quantity
         if quantity is None:
-            quantity = self.sizer.order_size(order, action)
+            quantity = self.sizer.order_size(strategy, action)
+
+        order = Order(self.current_date, strategy, action,
+                      quantity, order_type, order_tif, price)
 
         # create an new order and place it in the queue
-        event = OrderEvent(ticket, self.current_date, order, action, quantity)
+        event = OrderEvent(self.current_date, order)
         self.queue.put(event)
 
-        # add the ticket into the order list for tracking
-        self.order_list.append(ticket)
-
-        return ticket
+        return
 
     def close_order(self, ticket, price=None):
         pass
 
     def cancel(self):
         pass
-
-    def generate_ticket(self):
-        return random.randint(100000, 999999)

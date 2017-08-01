@@ -39,7 +39,7 @@ bt.add_opt_strategy(SampleStrategy,
                     symbol=("VXX",),
                     DTE=(kd.Period.SEVEN_WEEKS,),
                     width=(2,),
-                    price=(0.5, 1)
+                    price=(1,)
                     )
 bt.run()
 

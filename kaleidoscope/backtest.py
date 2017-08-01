@@ -113,12 +113,12 @@ class Backtest(object):
                 else:
                     if event is not None:
                         if event.type == EventType.DATA:
+                            # update account values with current data
+                            self.broker.account.update_account(event)
                             # update broker with current data
                             self.broker.update_data_event(event)
                             # update strategy instance with current data
                             strategy.on_data_event(event)
-                            # update account values with current data
-                            self.broker.account.update_account(event)
                         elif event.type == EventType.ORDER:
                             self.broker.execute_order(event)
                         elif event.type == EventType.FILL:

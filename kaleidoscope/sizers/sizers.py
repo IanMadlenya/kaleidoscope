@@ -1,7 +1,7 @@
-from .base import Sizer
+from .base import BaseSizer
 
 
-class DollarAmountSizer(Sizer):
+class DollarAmountSizer(BaseSizer):
     def __init__(self, account, amount):
         self.amount = amount
         super().__init__(account)
@@ -10,7 +10,7 @@ class DollarAmountSizer(Sizer):
         pass
 
 
-class FixedQuantitySizer(Sizer):
+class FixedQuantitySizer(BaseSizer):
     def __init__(self, account, quantity=10):
         self.quantity = quantity
         super().__init__(account)

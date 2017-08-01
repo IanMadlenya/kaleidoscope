@@ -1,4 +1,4 @@
-class AbstractDataFeed(object):
+class BaseDataFeed(object):
     """
     Map columns from data source to the standard option columns used in the library.
     first position of tuple: column names used in program

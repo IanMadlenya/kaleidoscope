@@ -39,7 +39,7 @@ class OrderEvent(Event):
     and quantity.
     """
 
-    def __init__(self, ticket, date, order, action, quantity):
+    def __init__(self, date, order):
         """
         Initialises the OrderEvent.
 
@@ -49,12 +49,9 @@ class OrderEvent(Event):
         :param tif:
         :param quantity:
         """
-        self.ticket = ticket
         self.type = EventType.ORDER
         self.date = date
         self.order = order
-        self.action = action
-        self.quantity = quantity
 
         self.print_event()
 
@@ -62,22 +59,7 @@ class OrderEvent(Event):
         """
         Outputs the values within the OrderEvent.
         """
-        t = self.ticket
-        d = self.date
-        a = self.action.name
-        q = self.quantity
-        m = self.order.mark
-        n = self.order.name
-        s = self.order.underlying_symbol
-
-        exps = self.order.expirations
-        p_e = [datetime.strptime(exp, "%Y-%m-%d") for exp in exps]
-        e = "".join('%s/' % p.strftime('%d %b %y') for p in p_e)[0: -1]
-
-        sts = self.order.strikes
-        st = "".join('%s/' % '{0:g}'.format(st) for st in sts)[0: -1]
-
-        print(f"Order Event #{t} on: {d}: {q} {a} @{m:.2f} {n} {s} {e} {st}")
+        print(f"Order Event on: {self.date}: {self.order}")
 
 
 class FillEvent(Event):
@@ -121,7 +103,7 @@ class FillEvent(Event):
         """
         t = self.ticket
         d = self.date
-        a = self.action.name
+        a = self.action
         q = self.quantity
         m = self.mark
         n = self.order.name

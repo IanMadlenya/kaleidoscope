@@ -1,6 +1,6 @@
 # pylint: disable=E1101
 import re
-
+from datetime import datetime
 from kaleidoscope.options.order_leg import OptionLeg, StockLeg
 from kaleidoscope.globals import OrderAction
 from kaleidoscope.helpers import parse_symbol
@@ -161,3 +161,19 @@ class OptionStrategy(object):
         :return:
         """
         pass
+
+    def __str__(self):
+        if self.legs is None:
+            return f"{self.name}s"
+        else:
+            n = self.name.upper()
+            s = self.underlying_symbol
+
+            exps = self.expirations
+            p_e = [datetime.strptime(exp, "%Y-%m-%d") for exp in exps]
+            e = "".join('%s/' % p.strftime('%d %b %y').upper() for p in p_e)[0: -1]
+
+            sts = self.strikes
+            st = "".join('%s/' % '{0:g}'.format(st) for st in sts)[0: -1]
+
+            return f"{n} {s} {e} {st}"

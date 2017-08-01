@@ -2,7 +2,7 @@ import pandas as pd
 from kaleidoscope.options.iterator.option_chain import OptionChainIterator
 
 
-class Broker(object):
+class BaseBroker(object):
     def __init__(self, datafeed, comm, margin, queue):
 
         self.datafeed = datafeed

@@ -1,4 +1,4 @@
-class Sizer(object):
+class BaseSizer(object):
     def __init__(self, account):
         self.account = account
 

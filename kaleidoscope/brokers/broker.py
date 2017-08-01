@@ -21,8 +21,7 @@ class DefaultBroker(Broker):
 
         order_margin = abs(self.margin.get_margin(event.order, event.action) * event.quantity * 100)
 
-        if self.account.cash - final_cost > 0 and \
-                                self.account.option_buying_power - order_margin > 0:
+        if self.account.cash - final_cost > 0 and self.account.option_buying_power - order_margin > 0:
             # create a fill event and place it in the queue
             event = FillEvent(self.current_date, event.order,
                               event.ticket, event.action,

@@ -1,10 +1,10 @@
 import datetime
-import random
-from kaleidoscope.globals import OrderAction, OrderType, OrderTIF
+
 from kaleidoscope.event import OrderEvent
+from kaleidoscope.globals import OrderAction, OrderType, OrderTIF
+from kaleidoscope.options.option_strategy import OptionStrategy
 from kaleidoscope.order import Order
 from kaleidoscope.sizers.sizers import FixedQuantitySizer
-from kaleidoscope.options.option_strategy import OptionStrategy
 
 
 class Strategy(object):
@@ -140,7 +140,9 @@ class Strategy(object):
         if quantity is None:
             quantity = self.sizer.order_size(strategy, action)
 
-        order = Order(self.current_date, strategy, action,
+        ticket = self.broker.generate_ticket()
+
+        order = Order(ticket, self.current_date, strategy, action,
                       quantity, order_type, order_tif, price)
 
         # create an new order and place it in the queue

@@ -1,5 +1,4 @@
 from enum import Enum
-from datetime import datetime
 
 EventType = Enum("EventType", "DATA ORDER FILL")
 
@@ -33,21 +32,13 @@ class DataEvent(Event):
 
 
 class OrderEvent(Event):
-    """
-    Handles the event of sending an Order to an execution system.
-    The order contains a ticker (e.g. SPX), action (BOT or SLD)
-    and quantity.
-    """
 
     def __init__(self, date, order):
         """
-        Initialises the OrderEvent.
+        The OrderEvent created by strategy class.
 
-        :param order:
-        :param action:
-        :param order_type:
-        :param tif:
-        :param quantity:
+        :param date: Date of event
+        :param order: Order for the event
         """
         self.type = EventType.ORDER
         self.date = date
@@ -59,41 +50,27 @@ class OrderEvent(Event):
         """
         Outputs the values within the OrderEvent.
         """
-        print(f"Order Event on: {self.date}: {self.order}")
+        print(f"ORDER #{self.order.ticket} OPENED ON {self.date}: {self.order}")
 
 
 class FillEvent(Event):
-    """
-    Encapsulates the notion of a filled order, as returned
-    from a brokerage. Stores the quantity of an instrument
-    actually filled and at what price. In addition, stores
-    the commission of the trade from the brokerage.
-    """
-
-    def __init__(self, date, order, ticket,
-                 action, quantity, cost, margin, commission
-                 ):
+    def __init__(self, date, order):
         """
-         Initialises the FillEvent object.
+        Initialises the FillEvent object created by broker.
 
-        :param date:
-        :param order:
-        :param ticket:
-        :param action:
-        :param quantity:
-        :param price:
-        :param commission:
+        :param date: Date of event
+        :param order: Order for the event
         """
         self.type = EventType.FILL
         self.date = date
         self.order = order
-        self.mark = self.order.mark
-        self.ticket = ticket
-        self.action = action
-        self.quantity = quantity
-        self.cost = cost
-        self.margin = margin
-        self.commission = commission
+        self.mark = order.mark
+        self.ticket = order.ticket
+        self.action = order.action
+        self.quantity = order.quantity
+        self.cost = order.final_cost
+        self.margin = order.order_margin
+        self.commission = order.commissions
 
         self.print_event()
 
@@ -101,19 +78,4 @@ class FillEvent(Event):
         """
         Outputs the values within the OrderEvent.
         """
-        t = self.ticket
-        d = self.date
-        a = self.action
-        q = self.quantity
-        m = self.mark
-        n = self.order.name
-        s = self.order.underlying_symbol
-
-        exps = self.order.expirations
-        p_e = [datetime.strptime(exp, "%Y-%m-%d") for exp in exps]
-        e = "".join('%s/' % p.strftime('%d %b %y') for p in p_e)[0: -1]
-
-        sts = self.order.strikes
-        st = "".join('%s/' % '{0:g}'.format(st) for st in sts)[0: -1]
-
-        print(f"Fill Event #{t} on: {d}: {q} {a} @{m:.2f} {n} {s} {e} {st}")
+        print(f"ORDER #{self.order.ticket} FILLED ON {self.date}: {self.order}")

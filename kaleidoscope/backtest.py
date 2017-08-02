@@ -3,13 +3,12 @@ import itertools
 import queue
 import time
 
-from kaleidoscope.brokers.broker import DefaultBroker
-from kaleidoscope.datafeeds.sqlite_data import SQLiteDataFeed
-from kaleidoscope.sizers.sizers import FixedQuantitySizer
-from kaleidoscope.comm import DefaultCommissions
-from kaleidoscope.margin import ThinkOrSwimMargin
 from kaleidoscope.account import Account
+from kaleidoscope.brokers.default_broker import DefaultBroker
+from kaleidoscope.comm import DefaultCommissions
+from kaleidoscope.datafeeds.sqlite_data import SQLiteDataFeed
 from kaleidoscope.event import EventType
+from kaleidoscope.margin import ThinkOrSwimMargin
 
 
 class Backtest(object):

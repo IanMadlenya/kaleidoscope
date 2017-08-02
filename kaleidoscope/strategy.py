@@ -4,7 +4,7 @@ from kaleidoscope.event import OrderEvent
 from kaleidoscope.globals import OrderAction, OrderType, OrderTIF
 from kaleidoscope.options.option_strategy import OptionStrategy
 from kaleidoscope.order import Order
-from kaleidoscope.sizers.sizers import FixedQuantitySizer
+from kaleidoscope.sizers.fixed_quantity import FixedQuantitySizer
 
 
 class Strategy(object):
@@ -118,18 +118,18 @@ class Strategy(object):
         pass
 
     def place_order(self, strategy, action, quantity=None,
-                    order_tif=OrderTIF.GTC, order_type=OrderType.MKT, price=None):
+                    order_tif=OrderTIF.GTC, order_type=OrderType.MKT, limit_price=None):
 
         """
         Create a buy signal event and place it in the queue
 
         :param strategy: OptionStrategy object containing option legs of an option strategy
-        :param action:
-        :param price:
+        :param action: The order action for this order, OrderAction.BUY or OrderAction.SELL
+        :param limit_price: The limit price for this order
         :param order_type: The action of the order, BUY or SELL
-        :param order_tif:
+        :param order_tif: The 'time in force' for this order, default GTC
         :param quantity: The amount to transaction, > 0 for buy < 0 for sell
-        :return:
+        :return: None
         """
         if not isinstance(strategy, OptionStrategy):
             raise ValueError("Strategy param must be of type OptionStrategy")
@@ -143,7 +143,7 @@ class Strategy(object):
         ticket = self.broker.generate_ticket()
 
         order = Order(ticket, self.current_date, strategy, action,
-                      quantity, order_type, order_tif, price)
+                      quantity, order_type, order_tif, limit_price)
 
         # create an new order and place it in the queue
         event = OrderEvent(self.current_date, order)

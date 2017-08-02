@@ -1,15 +1,6 @@
 from .base import BaseSizer
 
 
-class DollarAmountSizer(BaseSizer):
-    def __init__(self, account, amount):
-        self.amount = amount
-        super().__init__(account)
-
-    def order_size(self, signal):
-        pass
-
-
 class FixedQuantitySizer(BaseSizer):
     def __init__(self, account, quantity=10):
         self.quantity = quantity

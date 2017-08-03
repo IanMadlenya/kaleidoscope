@@ -58,21 +58,21 @@ class TestOptionStrategy(TestCase):
 
         # test option leg
         self.assertEqual(len(self.op_test.legs), 2)
-        self.assertEqual(1, self.op_test.legs[0].quantity)
-        self.assertEqual(-1, self.op_test.legs[1].quantity)
+        self.assertEqual(1, self.op_test.legs[0]['quantity'])
+        self.assertEqual(-1, self.op_test.legs[1]['quantity'])
 
         # test option in option legs
-        self.assertEqual("VXX160219C00030000", self.op_test.legs[0].contract.symbol)
-        self.assertEqual("VXX160219C00035000", self.op_test.legs[1].contract.symbol)
+        self.assertEqual("VXX160219C00030000", self.op_test.legs[0]['contract'].symbol)
+        self.assertEqual("VXX160219C00035000", self.op_test.legs[1]['contract'].symbol)
 
-        self.assertEqual("2016-02-19", self.op_test.legs[0].contract.expiration)
-        self.assertEqual("2016-02-19", self.op_test.legs[1].contract.expiration)
+        self.assertEqual("2016-02-19", self.op_test.legs[0]['contract'].expiration)
+        self.assertEqual("2016-02-19", self.op_test.legs[1]['contract'].expiration)
 
-        self.assertEqual("C", self.op_test.legs[0].contract.option_type)
-        self.assertEqual("C", self.op_test.legs[1].contract.option_type)
+        self.assertEqual("C", self.op_test.legs[0]['contract'].option_type)
+        self.assertEqual("C", self.op_test.legs[1]['contract'].option_type)
 
-        self.assertEqual(30.0, self.op_test.legs[0].contract.strike)
-        self.assertEqual(35.0, self.op_test.legs[1].contract.strike)
+        self.assertEqual(30.0, self.op_test.legs[0]['contract'].strike)
+        self.assertEqual(35.0, self.op_test.legs[1]['contract'].strike)
 
     def test_map_butterfly(self):
         # test case for call spread
@@ -86,26 +86,26 @@ class TestOptionStrategy(TestCase):
 
         # test option leg
         self.assertEqual(len(self.op_test.legs), 3)
-        self.assertEqual(1, self.op_test.legs[0].quantity)
-        self.assertEqual(-2, self.op_test.legs[1].quantity)
-        self.assertEqual(1, self.op_test.legs[2].quantity)
+        self.assertEqual(1, self.op_test.legs[0]['quantity'])
+        self.assertEqual(-2, self.op_test.legs[1]['quantity'])
+        self.assertEqual(1, self.op_test.legs[2]['quantity'])
 
         # test option in option legs
-        self.assertEqual("VXX160219C00030000", self.op_test.legs[0].contract.symbol)
-        self.assertEqual("VXX160219C00035000", self.op_test.legs[1].contract.symbol)
-        self.assertEqual("VXX160219C00040000", self.op_test.legs[2].contract.symbol)
+        self.assertEqual("VXX160219C00030000", self.op_test.legs[0]['contract'].symbol)
+        self.assertEqual("VXX160219C00035000", self.op_test.legs[1]['contract'].symbol)
+        self.assertEqual("VXX160219C00040000", self.op_test.legs[2]['contract'].symbol)
 
-        self.assertEqual("2016-02-19", self.op_test.legs[0].contract.expiration)
-        self.assertEqual("2016-02-19", self.op_test.legs[1].contract.expiration)
-        self.assertEqual("2016-02-19", self.op_test.legs[2].contract.expiration)
+        self.assertEqual("2016-02-19", self.op_test.legs[0]['contract'].expiration)
+        self.assertEqual("2016-02-19", self.op_test.legs[1]['contract'].expiration)
+        self.assertEqual("2016-02-19", self.op_test.legs[2]['contract'].expiration)
 
-        self.assertEqual("C", self.op_test.legs[0].contract.option_type)
-        self.assertEqual("C", self.op_test.legs[1].contract.option_type)
-        self.assertEqual("C", self.op_test.legs[2].contract.option_type)
+        self.assertEqual("C", self.op_test.legs[0]['contract'].option_type)
+        self.assertEqual("C", self.op_test.legs[1]['contract'].option_type)
+        self.assertEqual("C", self.op_test.legs[2]['contract'].option_type)
 
-        self.assertEqual(30.0, self.op_test.legs[0].contract.strike)
-        self.assertEqual(35.0, self.op_test.legs[1].contract.strike)
-        self.assertEqual(40.0, self.op_test.legs[2].contract.strike)
+        self.assertEqual(30.0, self.op_test.legs[0]['contract'].strike)
+        self.assertEqual(35.0, self.op_test.legs[1]['contract'].strike)
+        self.assertEqual(40.0, self.op_test.legs[2]['contract'].strike)
 
     def test_map_iron_condor(self):
         # test case for call spread
@@ -121,31 +121,31 @@ class TestOptionStrategy(TestCase):
         # test option leg
         self.assertEqual(len(self.op_test.legs), 4)
 
-        self.assertEqual(1, self.op_test.legs[0].quantity)
-        self.assertEqual(-1, self.op_test.legs[1].quantity)
-        self.assertEqual(1, self.op_test.legs[2].quantity)
-        self.assertEqual(-1, self.op_test.legs[3].quantity)
+        self.assertEqual(1, self.op_test.legs[0]['quantity'])
+        self.assertEqual(-1, self.op_test.legs[1]['quantity'])
+        self.assertEqual(1, self.op_test.legs[2]['quantity'])
+        self.assertEqual(-1, self.op_test.legs[3]['quantity'])
 
         # test option in option legs
-        self.assertEqual("VXX160219C00030000", self.op_test.legs[0].contract.symbol)
-        self.assertEqual("VXX160219C00035000", self.op_test.legs[1].contract.symbol)
-        self.assertEqual("VXX160219P00045000", self.op_test.legs[2].contract.symbol)
-        self.assertEqual("VXX160219P00040000", self.op_test.legs[3].contract.symbol)
+        self.assertEqual("VXX160219C00030000", self.op_test.legs[0]['contract'].symbol)
+        self.assertEqual("VXX160219C00035000", self.op_test.legs[1]['contract'].symbol)
+        self.assertEqual("VXX160219P00045000", self.op_test.legs[2]['contract'].symbol)
+        self.assertEqual("VXX160219P00040000", self.op_test.legs[3]['contract'].symbol)
 
-        self.assertEqual("2016-02-19", self.op_test.legs[0].contract.expiration)
-        self.assertEqual("2016-02-19", self.op_test.legs[1].contract.expiration)
-        self.assertEqual("2016-02-19", self.op_test.legs[2].contract.expiration)
-        self.assertEqual("2016-02-19", self.op_test.legs[3].contract.expiration)
+        self.assertEqual("2016-02-19", self.op_test.legs[0]['contract'].expiration)
+        self.assertEqual("2016-02-19", self.op_test.legs[1]['contract'].expiration)
+        self.assertEqual("2016-02-19", self.op_test.legs[2]['contract'].expiration)
+        self.assertEqual("2016-02-19", self.op_test.legs[3]['contract'].expiration)
 
-        self.assertEqual("C", self.op_test.legs[0].contract.option_type)
-        self.assertEqual("C", self.op_test.legs[1].contract.option_type)
-        self.assertEqual("P", self.op_test.legs[2].contract.option_type)
-        self.assertEqual("P", self.op_test.legs[3].contract.option_type)
+        self.assertEqual("C", self.op_test.legs[0]['contract'].option_type)
+        self.assertEqual("C", self.op_test.legs[1]['contract'].option_type)
+        self.assertEqual("P", self.op_test.legs[2]['contract'].option_type)
+        self.assertEqual("P", self.op_test.legs[3]['contract'].option_type)
 
-        self.assertEqual(30.0, self.op_test.legs[0].contract.strike)
-        self.assertEqual(35.0, self.op_test.legs[1].contract.strike)
-        self.assertEqual(45.0, self.op_test.legs[2].contract.strike)
-        self.assertEqual(40.0, self.op_test.legs[3].contract.strike)
+        self.assertEqual(30.0, self.op_test.legs[0]['contract'].strike)
+        self.assertEqual(35.0, self.op_test.legs[1]['contract'].strike)
+        self.assertEqual(45.0, self.op_test.legs[2]['contract'].strike)
+        self.assertEqual(40.0, self.op_test.legs[3]['contract'].strike)
 
     def test_nearest_mark_vertical(self):
         self.datafeed = SQLiteDataFeed()

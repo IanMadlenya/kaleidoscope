@@ -8,12 +8,11 @@ class Order(object):
         # Order ticket, to be created by broker
         self.ticket = ticket
 
-        # Order specific properties
-        self.order_strat = order_strat
-
-        if isinstance(self.order_strat, OptionStrategy):
+        if isinstance(order_strat, OptionStrategy):
+            self.order_strat = order_strat
             self.underlying_symbol = order_strat.underlying_symbol
             self.name = order_strat.name
+            self.contracts = order_strat.legs
 
         self.date = date
         self.executed_price = 0

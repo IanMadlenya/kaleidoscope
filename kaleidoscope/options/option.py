@@ -3,8 +3,7 @@
 """
 Class to represent an option
 """
-import datetime
-import numpy as np
+from datetime import datetime
 
 
 class Option(object):
@@ -17,11 +16,9 @@ class Option(object):
                  bid=0, ask=0, delta=0, theta=0,
                  gamma=0, vega=0, rho=0
                  ):
+
         self.symbol = symbol
-
-        exp = datetime.datetime.strptime(expiration, "%y%m%d")
-        self.expiration = exp.strftime("%Y-%m-%d")
-
+        self.expiration = datetime.strptime(expiration, "%y%m%d").strftime("%Y-%m-%d")
         self.option_type = option_type
         self.strike = int(strike) / 1000
 
@@ -33,3 +30,12 @@ class Option(object):
         self.gamma = gamma
         self.vega = vega
         self.rho = rho
+
+    def __hash__(self):
+        return hash(self.symbol)
+
+    def __eq__(self, other):
+        return self.symbol == other.symbol
+
+    def __ne__(self, other):
+        return not(self == other)

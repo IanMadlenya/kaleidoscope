@@ -1,3 +1,6 @@
+from kaleidoscope.position import Position
+
+
 class Account(object):
 
     def __init__(self, cash=10000):
@@ -43,6 +46,13 @@ class Account(object):
         self.option_buying_power -= event.margin
         self.comm_agg += event.commission
 
+        for leg in event.order.contracts:
+            self.positions.append(Position(leg['contract'], leg['quantity']))
+
+        print(f"Cash: {self.cash}"
+              f" Net Liquidating Value: {self.net_liquidating_value}"
+              f" Option Buying Power: {self.option_buying_power}")
+
     def update_account(self, event):
         """
         Update the current prices for all options held in the account.
@@ -50,6 +60,4 @@ class Account(object):
         :param event: Data event to process
         :return: None
         """
-        print(f"Cash: {self.cash}"
-              f" Net Liquidating Value: {self.net_liquidating_value}"
-              f" Option Buying Power: {self.option_buying_power}")
+        pass

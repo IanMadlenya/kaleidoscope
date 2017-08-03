@@ -87,7 +87,7 @@ class OptionStrategy(object):
                 if option.strike not in strikes:
                     strikes.append(option.strike)
 
-                strat_legs.append(OptionLeg(option, quantity=quantity * side.value))
+                strat_legs.append({'contract': option, 'quantity': quantity*side.value})
 
                 quantity = 1
                 side = OrderAction.BUY

@@ -5,16 +5,16 @@ import time
 
 from kaleidoscope.account import Account
 from kaleidoscope.brokers.default_broker import DefaultBroker
-from kaleidoscope.comm import DefaultCommissions
+from kaleidoscope.commissions import default_commissions
 from kaleidoscope.datafeeds.sqlite_data import SQLiteDataFeed
 from kaleidoscope.event import EventType
-from kaleidoscope.margin import ThinkOrSwimMargin
+from kaleidoscope.margin import tos_margin
 
 
 class Backtest(object):
     def __init__(self, broker=DefaultBroker,
-                 comm=DefaultCommissions,
-                 margin=ThinkOrSwimMargin,
+                 commissions=default_commissions,
+                 margin=tos_margin,
                  data=SQLiteDataFeed,
                  data_path=None
                  ):
@@ -26,9 +26,9 @@ class Backtest(object):
 
         # initialize backtest configuration
         self.datafeed = data(data_path)
-        self.comm = comm()
-        self.margin = margin()
-        self.broker = broker(self.datafeed, self.comm, self.margin, self.queue)
+        self.commissions = commissions
+        self.margin = margin
+        self.broker = broker(self.datafeed, self.commissions, self.margin, self.queue)
 
     def add_strategy(self, strategy, **kwargs):
         """

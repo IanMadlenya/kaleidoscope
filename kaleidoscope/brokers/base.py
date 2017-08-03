@@ -1,13 +1,14 @@
 import pandas as pd
+
 from kaleidoscope.options.iterator.option_chain import OptionChainIterator
 
 
 class BaseBroker(object):
-    def __init__(self, datafeed, comm, margin, queue):
+    def __init__(self, datafeed, commissions, margin, queue):
 
         self.datafeed = datafeed
         self.account = None
-        self.comm = comm
+        self.commissions = commissions
         self.margin = margin
 
         # raw options chain data dict

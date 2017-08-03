@@ -7,11 +7,11 @@ from .base import BaseBroker
 
 
 class DefaultBroker(BaseBroker):
-    def __init__(self, datafeed, comm, margin, queue):
+    def __init__(self, datafeed, commissions, margin, queue):
 
         self.order_list = collections.OrderedDict()
 
-        super().__init__(datafeed, comm, margin, queue)
+        super().__init__(datafeed, commissions, margin, queue)
 
     def _execute(self, order):
         """
@@ -58,8 +58,8 @@ class DefaultBroker(BaseBroker):
         action = order.action
 
         # calculate cost and margin requirements for the order
-        commissions = self.comm.get_commissions(strategy, quantity)
-        order_margin = abs(self.margin.get_margin(strategy, action) * quantity * 100)
+        commissions = self.commissions(strategy, quantity)
+        order_margin = abs(self.margin(strategy, action) * quantity * 100)
         order.update_costs(commissions, order_margin)
 
         # Check that we have enough option buying power/cash to carry out the order

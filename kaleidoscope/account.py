@@ -13,10 +13,6 @@ class Account(object):
         self.comm_agg = 0
         self.positions = list()
 
-        """
-        self.positions = {'VXX160219C00030000': -20, 'VXX160219C00025000': 20}
-        """
-
     def set_cash(self, amt):
         """
         Set the cash balance of this broker account instance
@@ -26,38 +22,37 @@ class Account(object):
         """
         self.cash = amt
 
-    def has_positions(self):
-        """
-        Return true if account has positions otherwise return false
-        :return: boolean
-        """
-        if len(self.positions) > 0:
-            return True
-        return False
-
-    def process_order(self, event):
+    def process_order(self, order):
         """
         Append the new options positions to the account.
 
         :param event: Fill event to process
         :return: None
         """
-        self.cash -= event.cost
-        self.option_buying_power -= event.margin
-        self.comm_agg += event.commission
+        self.cash -= order.total_cost
+        self.comm_agg += order.commissions
 
-        for leg in event.order.contracts:
-            self.positions.append(Position(leg['contract'], leg['quantity']))
+        # for each order leg, add the position into the position list
+        # if symbols duplicate, merge the quantities together.
+        for leg in order.order_strat.legs:
+            position = Position(leg['contract'], leg['quantity'])
+            if position not in self.positions:
+                # this position does not exist yet, add it
+                self.positions.append(Position(leg['contract'], leg['quantity']))
+            else:
+                # update the quantity of the position if already exist
+                idx = self.positions.index(position)
+                self.positions[idx] = self.positions[idx] + position
 
-        print(f"Cash: {self.cash}"
-              f" Net Liquidating Value: {self.net_liquidating_value}"
-              f" Option Buying Power: {self.option_buying_power}")
-
-    def update_account(self, event):
+    def update(self, quotes):
         """
-        Update the current prices for all options held in the account.
 
-        :param event: Data event to process
-        :return: None
+        :param quotes:
+        :return:
         """
-        pass
+        total_open_pl = 0
+
+        for position in self.positions:
+            position.update(quotes)
+            total_open_pl += position.open_pl
+            self.net_liquidating_value = total_open_pl

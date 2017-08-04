@@ -100,7 +100,9 @@ class Backtest(object):
             # initialize a new instance strategy from the strategy list
             # and an account instance for each scenario
             self.broker.set_account(Account())
-            strategy = scenario[0](self.broker, self.queue, **scenario[1])
+            strategy = scenario[0](self.broker, self.queue,
+                                   self.commissions, self.margin, **scenario[1]
+                                   )
             self.broker.continue_backtest = True
 
             while self.broker.continue_backtest:
@@ -112,16 +114,13 @@ class Backtest(object):
                 else:
                     if event is not None:
                         if event.type == EventType.DATA:
-                            # update account values with current data
-                            self.broker.account.update_account(event)
-                            # update broker with current data
-                            self.broker.update_data_event(event)
                             # update strategy instance with current data
                             strategy.on_data_event(event)
                         elif event.type == EventType.ORDER:
-                            self.broker.execute_order(event)
+                            # send the order to the broker for processing
+                            self.broker.process_order(event)
                         elif event.type == EventType.FILL:
-                            self.broker.account.process_order(event)
+                            # notify the strategy tht we have a fill on one of its orders
                             strategy.on_fill_event(event)
                         else:
                             raise NotImplementedError("Unsupported event.type '%s'" % event.type)

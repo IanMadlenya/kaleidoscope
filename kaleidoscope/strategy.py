@@ -4,7 +4,7 @@ from kaleidoscope.event import OrderEvent
 from kaleidoscope.globals import OrderAction, OrderType, OrderTIF
 from kaleidoscope.options.option_strategy import OptionStrategy
 from kaleidoscope.order import Order
-from kaleidoscope.sizers.fixed_quantity import FixedQuantitySizer
+from kaleidoscope.sizers import fixed_quantity_sizer
 
 
 class Strategy(object):
@@ -14,10 +14,11 @@ class Strategy(object):
     based on option greeks and prices.
     """
 
-    def __init__(self, broker, queue, **params):
+    def __init__(self, broker, queue, comm_func, margin_func, **params):
         self.broker = broker
-        self.account = self.broker.account
         self.current_date = None
+        self.commission = comm_func
+        self.margin = margin_func
 
         self.queue = queue
         self.order_list = list()
@@ -26,9 +27,12 @@ class Strategy(object):
         self.end_date = None
 
         if 'sizer' not in params:
-            self.sizer = FixedQuantitySizer(self.account)
+            self.sizer = fixed_quantity_sizer
 
         self._init(**params)
+
+    def positions_total(self):
+        return self.broker.positions_total()
 
     def set_cash(self, amt):
         """
@@ -37,7 +41,7 @@ class Strategy(object):
         :param amt: The cash amount to set for the trading account
         :return:
         """
-        self.account.set_cash(amt)
+        self.broker.set_account_balance(amt)
 
     def add_option(self, symbol, exclude_splits=True, option_type=None):
         """
@@ -138,12 +142,13 @@ class Strategy(object):
 
         # use sizer to determine quantity
         if quantity is None:
-            quantity = self.sizer.order_size(strategy, action)
+            quantity = self.sizer(strategy, action)
 
         ticket = self.broker.generate_ticket()
 
         order = Order(ticket, self.current_date, strategy, action,
-                      quantity, order_type, order_tif, limit_price)
+                      quantity, order_type, order_tif, limit_price,
+                      self.commission, self.margin)
 
         # create an new order and place it in the queue
         event = OrderEvent(self.current_date, order)

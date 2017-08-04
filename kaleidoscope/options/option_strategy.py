@@ -1,11 +1,10 @@
 # pylint: disable=E1101
 import re
 from datetime import datetime
-from kaleidoscope.options.order_leg import OptionLeg, StockLeg
+
 from kaleidoscope.globals import OrderAction
-from kaleidoscope.helpers import parse_symbol
-from kaleidoscope.options.option_query import OptionQuery
 from kaleidoscope.options.option import Option
+from kaleidoscope.options.option_query import OptionQuery
 
 
 class OptionStrategy(object):
@@ -15,7 +14,7 @@ class OptionStrategy(object):
     that matches the method requirements.
     """
 
-    def __init__(self, chains, name=None):
+    def __init__(self, chains, original_chains, name=None):
         """
         This class holds an instance of an option strategy and it's
         components and provides methods to manipulate the option legs
@@ -24,6 +23,7 @@ class OptionStrategy(object):
         :params: chains: Dataframe containing shifted columns representing an option leg
         """
         self.chains = chains
+        self._chains = original_chains.drop('strike_key', axis=1)
         self.name = name
 
         if self.chains is not None:
@@ -31,9 +31,11 @@ class OptionStrategy(object):
 
         # attributes to be filled when 'nearest' methods are used
         self.legs = None
+        self.symbols = None
         self.expirations = None
         self.strikes = None
         self.option_types = None
+
         self.mark = None
         self.max_strike_width = None
 
@@ -50,6 +52,7 @@ class OptionStrategy(object):
         parsed = re.findall('\W+|\w+', trimmed_sym)
 
         strat_legs = list()
+        symbols = list()
         exps = list()
         strikes = list()
 
@@ -73,25 +76,28 @@ class OptionStrategy(object):
                     pass
 
             if len(piece) >= 18:
-                # this is an option symbol, parse it
-                sym_group = parse_symbol(piece)
-                exp = sym_group[2]
-                option_type = sym_group[3]
-                strike = sym_group[4]
+                # this is an option symbol, get option info
+                sym_info = self._chains[self._chains['symbol'] == piece].to_dict(orient='records')[0]
+                # convert pandas datetime
+                expiration = sym_info['expiration'].date().strftime("%Y-%m-%d")
 
-                option = Option(symbol=piece, expiration=exp, option_type=option_type, strike=strike)
+                option = Option(sym_info)
 
-                if option.expiration not in exps:
-                    exps.append(option.expiration)
+                if piece not in symbols:
+                    symbols.append(piece)
 
-                if option.strike not in strikes:
-                    strikes.append(option.strike)
+                if expiration not in exps:
+                    exps.append(expiration)
+
+                if sym_info['strike'] not in strikes:
+                    strikes.append(sym_info['strike'])
 
                 strat_legs.append({'contract': option, 'quantity': quantity*side.value})
 
                 quantity = 1
                 side = OrderAction.BUY
 
+        self.symbols = symbols
         self.expirations = exps
         self.strikes = strikes
 

@@ -3,7 +3,6 @@
 """
 Class to represent an option
 """
-from datetime import datetime
 
 
 class Option(object):
@@ -12,24 +11,9 @@ class Option(object):
     methods and creates an option object.
     """
 
-    def __init__(self, symbol, expiration, option_type, strike,
-                 bid=0, ask=0, delta=0, theta=0,
-                 gamma=0, vega=0, rho=0
-                 ):
-
-        self.symbol = symbol
-        self.expiration = datetime.strptime(expiration, "%y%m%d").strftime("%Y-%m-%d")
-        self.option_type = option_type
-        self.strike = int(strike) / 1000
-
-        self.bid = bid
-        self.ask = ask
-
-        self.delta = delta
-        self.theta = theta
-        self.gamma = gamma
-        self.vega = vega
-        self.rho = rho
+    def __init__(self, sym_info):
+        # use the attributes of option info to populate this instance's attributes
+        self.__dict__.update(sym_info)
 
     def __hash__(self):
         return hash(self.symbol)
@@ -39,3 +23,11 @@ class Option(object):
 
     def __ne__(self, other):
         return not(self == other)
+
+    def update(self, quote):
+        """
+        Update values of this option from quote object
+        :param quote: Dict containing option attributes from dataframe
+        :return:
+        """
+        print("updating")

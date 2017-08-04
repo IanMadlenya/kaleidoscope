@@ -22,6 +22,7 @@ class OptionStrategies(object):
 
         chains = OptionQuery(chain).option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
+        original_chains = chains
 
         chains['symbol'] = '.' + chains['symbol']
         chains['mark'] = (chains['bid'] + chains['ask']) / 2
@@ -34,7 +35,7 @@ class OptionStrategies(object):
                 chains[greek] = chains[greek] - chains[greek + "_shifted"]
                 new_col.append(greek)
 
-        return OptionStrategy(chains[new_col], "Single")
+        return OptionStrategy(chains[new_col], original_chains, "Single")
 
     @staticmethod
     def vertical(chain, **params):
@@ -59,6 +60,7 @@ class OptionStrategies(object):
 
         chains = chain.option_type(params['option_type'])
         chains = chains.lte('expiration', params['DTE']).fetch() if 'DTE' in params else chains.fetch()
+        original_chains = chains
 
         # shift only the strikes since this is a vertical spread
         chains['strike_key'] = chains['strike'] + (params['width'] * params['option_type'].value[1])
@@ -78,7 +80,7 @@ class OptionStrategies(object):
                 chains[greek] = chains[greek] - chains[greek + "_shifted"]
                 new_col.append(greek)
 
-        return OptionStrategy(chains[new_col], "Vertical")
+        return OptionStrategy(chains[new_col], original_chains, "Vertical")
 
     @staticmethod
     def iron_condor(chain, **params):
@@ -105,6 +107,7 @@ class OptionStrategies(object):
             raise ValueError("Parameter 'chain' must be of OptionQuery type")
 
         chains = chain.lte('expiration', params['DTE']) if 'DTE' in params else chain
+        original_chains = chains
 
         call_chains = chains.calls().fetch()
         put_chains = chains.puts().fetch()
@@ -149,7 +152,7 @@ class OptionStrategies(object):
                 chains[greek] = chains[greek] - chains[greek + "c_shifted"]
                 new_col.append(greek)
 
-        return OptionStrategy(chains[new_col], "Iron Condor")
+        return OptionStrategy(chains[new_col], original_chains, "Iron Condor")
 
     @staticmethod
     def covered_stock(chain, **params):

@@ -24,6 +24,9 @@ class BaseBroker(object):
     def set_account(self, account):
         self.account = account
 
+    def set_account_balance(self, balance):
+        self.account.set_cash(balance)
+
     def source(self, symbol, start=None, end=None,
                exclude_splits=True, option_type=None
                ):
@@ -67,15 +70,18 @@ class BaseBroker(object):
             self.continue_backtest = False
             return
 
+        # update the current state for the broker and it's orders
+        self.current_date = data_event.date
+        self.update_data(data_event.quotes)
+
         # Send event to queue
         self.queue.put(data_event)
 
-    def update_data_event(self, event):
-        self.current_date = event.date
-        self.update_data(event.quotes)
+    def update_data(self, event):
+        raise NotImplementedError("Subclass update_data method!")
 
-    def execute_order(self, event):
+    def process_order(self, event):
+        raise NotImplementedError("Subclass process_order method!")
+
+    def execute_order(self, order):
         raise NotImplementedError("Subclass execute_order method!")
-
-    def update_data(self, data):
-        pass

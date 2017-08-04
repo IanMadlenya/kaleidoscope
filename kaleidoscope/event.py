@@ -68,8 +68,8 @@ class FillEvent(Event):
         self.ticket = order.ticket
         self.action = order.action
         self.quantity = order.quantity
-        self.cost = order.final_cost
-        self.margin = order.order_margin
+        self.cost = order.total_cost
+        self.margin = order.margin
         self.commission = order.commissions
 
         self.print_event()

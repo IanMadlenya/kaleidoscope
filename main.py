@@ -19,7 +19,7 @@ class SampleStrategy(kd.Strategy):
 
     def on_data(self, data):
         # Data param is an OptionQuery object
-        if not self.account.has_positions():
+        if self.positions_total() < 1:
             call_spreads = kd.OptionStrategies.vertical(data,
                                                         option_type=kd.OptionType.CALL,
                                                         width=self.width,
@@ -30,7 +30,7 @@ class SampleStrategy(kd.Strategy):
             # we sell the spread using a default market order,
             # quantity will be determined automatically by sizer
             # unless quantity is specified
-            self.place_order(contract, action=kd.OrderAction.BUY)
+            self.place_order(contract, action=kd.OrderAction.SELL)
 
 
 # initialize the backtest

@@ -15,8 +15,9 @@ class Position(object):
         # set initial values
         self.trade_price = (self.contract.bid + self.contract.ask) / 2
         self.open_pl = 0
-        self.net_liquidating_value = 0
+
         self.mark = self.trade_price
+        self.net_liquidating_value = self.mark * self.quantity * 100
 
         # print("INIT - symbol: %s, trade_price: %s, mark: %s, open P/L: %s, underlying price: %s" %
         #       (self.contract.symbol, self.trade_price, self.mark, self.open_pl, self.contract.underlying_price))
@@ -35,10 +36,11 @@ class Position(object):
 
         # update mark value
         self.mark = (self.contract.bid + self.contract.ask) / 2
+        self.net_liquidating_value = self.mark * self.quantity * 100
         self.open_pl = (self.mark - self.trade_price) * self.quantity * 100
 
-        # print("symbol: %s, trade_price: %s, mark: %s, open P/L: %s, underlying price: %s" %
-        #       (self.contract.symbol, self.trade_price, self.mark, self.open_pl, self.contract.underlying_price))
+        # print("symbol: %s, trade_price: %s, mark: %s, open P/L: %s, nlv: %s" %
+        #       (self.contract.symbol, self.trade_price, self.mark, self.open_pl, self.net_liquidating_value))
 
     def __hash__(self):
         return hash(self.contract.symbol)

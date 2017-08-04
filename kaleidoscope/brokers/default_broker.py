@@ -10,8 +10,6 @@ class DefaultBroker(BaseBroker):
     def __init__(self, datafeed, commissions, margin, queue):
 
         self.order_list = collections.OrderedDict()
-        self.symbol_list = list()
-
         self.quotes = None
 
         super().__init__(datafeed, commissions, margin, queue)
@@ -74,9 +72,6 @@ class DefaultBroker(BaseBroker):
             # set the order status, as it is accepted
             order.status = OrderStatus.WORKING
 
-            # unpack the symbols contained this order and add it to the symbol list
-            self.symbol_list = list(set(self.symbol_list + order.order_strat.symbols))
-
             if order.order_type == OrderType.MKT:
                 # this is a market order, execute it immediately at current mark price
                 self._execute(order)
@@ -88,6 +83,7 @@ class DefaultBroker(BaseBroker):
                     self._execute(order)
         else:
             order.status = OrderStatus.REJECTED
+            print(f"REJECTED ORDER #{order.ticket}: Not enough buying power to execute order!")
 
     def update_data(self, quotes):
         """
@@ -98,16 +94,13 @@ class DefaultBroker(BaseBroker):
         """
         quotes = quotes.fetch()
 
-        # filter the quotes for only the necessary symbols
-        self.quotes = quotes[quotes['symbol'].isin(self.symbol_list)]
-
         # update the broker's working orders' option prices
         for order in self.order_list:
             if self.order_list[order].status == OrderStatus.WORKING:
                 order.update(self.quotes)
 
         # update the account's position values
-        self.account.update(self.quotes)
+        self.account.update(quotes)
 
         print(f"Cash: {self.account.cash:0.2f}"
               f" Net Liquidating Value: {self.account.net_liquidating_value:0.2f}"

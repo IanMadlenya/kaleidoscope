@@ -51,10 +51,19 @@ class Account(object):
         :param quotes:
         :return:
         """
-        total_open_pl = 0
-
 
         for position in self.positions:
             position.update(quotes)
-            total_open_pl += position.open_pl
-            self.net_liquidating_value = self.sweep + total_open_pl
+
+        self.calc_net_liquidating_value()
+
+    def calc_net_liquidating_value(self):
+        """
+
+        :return:
+        """
+        total_mkv = 0
+
+        for position in self.positions:
+            total_mkv += position.net_liquidating_value
+            self.net_liquidating_value = self.cash + total_mkv

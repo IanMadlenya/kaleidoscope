@@ -7,6 +7,7 @@ class Account(object):
 
         # initialize account balances
         self.cash = cash
+        self.sweep = cash
         self.net_liquidating_value = cash
         self.option_buying_power = cash
 
@@ -52,7 +53,8 @@ class Account(object):
         """
         total_open_pl = 0
 
+
         for position in self.positions:
             position.update(quotes)
             total_open_pl += position.open_pl
-            self.net_liquidating_value = total_open_pl
+            self.net_liquidating_value = self.sweep + total_open_pl

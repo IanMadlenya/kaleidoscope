@@ -19,7 +19,7 @@ class SampleStrategy(kd.Strategy):
 
     def on_data(self, data):
         # Data param is an OptionQuery object
-        if self.positions_total() < 1:
+        if self.positions_total() < 2:
             call_spreads = kd.OptionStrategies.vertical(data,
                                                         option_type=kd.OptionType.CALL,
                                                         width=self.width,

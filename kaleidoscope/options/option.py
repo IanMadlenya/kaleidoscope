@@ -13,7 +13,7 @@ class Option(object):
 
     def __init__(self, sym_info):
         # use the attributes of option info to populate this instance's attributes
-        self.__dict__.update(sym_info)
+        self.update(sym_info)
 
     def __hash__(self):
         return hash(self.symbol)
@@ -30,4 +30,7 @@ class Option(object):
         :param quote: Dict containing option attributes from dataframe
         :return:
         """
-        print("updating")
+        if 'bid' in quote and 'ask' in quote:
+            quote['mark'] = (quote['bid'] + quote['ask']) / 2
+
+        self.__dict__.update(quote)

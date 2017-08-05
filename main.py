@@ -13,27 +13,39 @@ class SampleStrategy(kd.Strategy):
         self.set_start_date(2016, 2, 19)
         self.set_end_date(2016, 2, 19)
 
-        # if strategy will execute only one type of option spread, specify
-        # the strategy with strategy param in add_option method to improve performance
+        # Subscribe to the options data specified from params
         self.add_option(self.symbol)
 
     def on_data(self, data):
-        # Data param is an OptionQuery object
-        if self.positions_total() < 2:
-            call_spreads = kd.OptionStrategies.vertical(data,
-                                                        option_type=kd.OptionType.CALL,
-                                                        width=self.width,
-                                                        DTE=self.DTE
-                                                        )
+        """
+        Define custom strategy rules in this function.
 
-            contract = call_spreads.nearest_mark(self.price)
-            # we sell the spread using a default market order,
-            # quantity will be determined automatically by sizer
-            # unless quantity is specified
-            self.place_order(contract, action=kd.OrderAction.BUY)
+        :param data: OptionQuery object containing today's option quotes
+        :return: None
+        """
+
+        # create vertical spreads with today's quotes
+        call_spreads = kd.OptionStrategies.vertical(data,
+                                                    option_type=kd.OptionType.CALL,
+                                                    width=self.width,
+                                                    DTE=self.DTE
+                                                    )
+
+        # filter the strikes to trade by looking at the spread's mark value
+        contract = call_spreads.nearest_mark(self.price)
+
+        # we sell the spread using a default market order,
+        # quantity will be determined automatically by sizer
+        # unless quantity is specified
+        self.place_order(contract, action=kd.OrderAction.SELL,
+                         order_type=kd.OrderType.LMT, limit_price=1.2)
+
+        # for testing purposes, we send only one order at a time.
+        self.tradable = False
 
     def on_fill(self, event):
-        pass
+        # for testing purposes, we allow trading again once an order was filled.
+        self.tradable = True
 
 
 # initialize the backtest

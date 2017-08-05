@@ -29,6 +29,8 @@ class Strategy(object):
         if 'sizer' not in params:
             self.sizer = fixed_quantity_sizer
 
+        self.tradable = True
+
         self._init(**params)
 
     def positions_total(self):
@@ -110,8 +112,8 @@ class Strategy(object):
 
     def on_fill_event(self, event):
         """
-        Acts as a receiver to the fill event passed from backtester
-        Set class params from fill event and pass data into on_fill method.
+        Acts as a receiver to the fill event passed from backtester.
+        Do any processing logic here before applying user defined logic.
 
         :param event: Fill event passed from backtester
         :return: None
@@ -119,6 +121,19 @@ class Strategy(object):
         self.on_fill(event)
 
     def on_fill(self, event):
+        pass
+
+    def on_rejected_event(self, event):
+        """
+        Acts as a receiver to the rejected event passed from backtester
+        Do any processing logic here before applying user defined logic.
+
+        :param event: Rejected event passed from backtester
+        :return: None
+        """
+        self.on_rejected(event)
+
+    def on_rejected(self, event):
         pass
 
     def place_order(self, strategy, action, quantity=None,
@@ -140,19 +155,20 @@ class Strategy(object):
         elif not isinstance(action, OrderAction):
             raise ValueError("Action must be of type OrderAction")
 
-        # use sizer to determine quantity
-        if quantity is None:
-            quantity = self.sizer(strategy, action)
+        if self.tradable:
+            # use sizer to determine quantity
+            if quantity is None:
+                quantity = self.sizer(strategy, action)
 
-        ticket = self.broker.generate_ticket()
+            ticket = self.broker.generate_ticket()
 
-        order = Order(ticket, self.current_date, strategy, action,
-                      quantity, order_type, order_tif, limit_price,
-                      self.commission, self.margin)
+            order = Order(ticket, self.current_date, strategy, action,
+                          quantity, order_type, order_tif, limit_price,
+                          self.commission, self.margin)
 
-        # create an new order and place it in the queue
-        event = OrderEvent(self.current_date, order)
-        self.queue.put(event)
+            # create an new order and place it in the queue
+            event = OrderEvent(self.current_date, order)
+            self.queue.put(event)
 
         return
 

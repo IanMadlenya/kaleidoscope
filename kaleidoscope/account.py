@@ -7,7 +7,6 @@ class Account(object):
 
         # initialize account balances
         self.cash = cash
-        self.sweep = cash
         self.net_liquidating_value = cash
         self.option_buying_power = cash
 
@@ -27,7 +26,7 @@ class Account(object):
         """
         Append the new options positions to the account.
 
-        :param event: Fill event to process
+        :param order: order to process
         :return: None
         """
         self.cash -= order.total_cost
@@ -36,10 +35,10 @@ class Account(object):
         # for each order leg, add the position into the position list
         # if symbols duplicate, merge the quantities together.
         for leg in order.order_strat.legs:
-            position = Position(leg['contract'], leg['quantity'])
+            position = Position(leg['contract'], leg['quantity'] * order.quantity)
             if position not in self.positions:
                 # this position does not exist yet, add it
-                self.positions.append(Position(leg['contract'], leg['quantity']))
+                self.positions.append(position)
             else:
                 # update the quantity of the position if already exist
                 idx = self.positions.index(position)
@@ -47,23 +46,26 @@ class Account(object):
 
     def update(self, quotes):
         """
-
-        :param quotes:
-        :return:
+        Update the account's position's values with latest quotes
+        :param quotes: DataFrame containing option chains
+        :return: None
         """
 
         for position in self.positions:
             position.update(quotes)
 
-        self.calc_net_liquidating_value()
+        self.net_liquidating_value = self.calc_net_liquidating_value()
 
     def calc_net_liquidating_value(self):
         """
+        Calculates the account's net liquidating value which is defined:
+        Net Liquidating Value = Cash + Market Value of Long - Market Value of Shorts
 
-        :return:
+        :return: None
         """
         total_mkv = 0
 
         for position in self.positions:
             total_mkv += position.net_liquidating_value
-            self.net_liquidating_value = self.cash + total_mkv
+
+        return self.cash + total_mkv

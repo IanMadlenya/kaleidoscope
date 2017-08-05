@@ -14,11 +14,6 @@ class Order(object):
             self.underlying_symbol = order_strat.underlying_symbol
             self.name = order_strat.__str__()
 
-            # apply the order quantity to the strategy to get the actual
-            # quantity for each leg of the contract
-            for leg in order_strat.legs:
-                leg['quantity'] *= quantity
-
         self.order_strat = order_strat
         self.date = date
         self.executed_price = 0
@@ -45,12 +40,13 @@ class Order(object):
         :params quotes: DataFrame of updated option symbols from broker
         """
         for leg in self.order_strat.legs:
-            quote = quotes[quote['symbol'] == leg['contract'].symbol]
+            quote = quotes[quotes['symbol'] == leg['contract'].symbol].to_dict(orient='records')[0]
             leg['contract'].update(quote)
 
+        # update the mark value of the order
+        self.mark = self.order_strat.calc_mark()
 
     def __str__(self):
-
         if self.executed_price == 0 and self.limit_price is None:
             price = "MKT"
         elif self.executed_price == 0 and self.limit_price is not None:

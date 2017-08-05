@@ -19,10 +19,7 @@ class Position(object):
         self.mark = self.trade_price
         self.net_liquidating_value = self.mark * self.quantity * 100
 
-        # print("INIT - symbol: %s, trade_price: %s, mark: %s, open P/L: %s, underlying price: %s" %
-        #       (self.contract.symbol, self.trade_price, self.mark, self.open_pl, self.contract.underlying_price))
-
-    def update(self, quotes):
+    def update(self, quotes: object) -> object:
         """
         Update this position's current market values
 
@@ -32,15 +29,12 @@ class Position(object):
         # TODO: account for stock legs for covered stocks
         # filter the quotes for this position's symbol and get the dict with all the attributes
         quote = quotes[quotes['symbol'] == self.contract.symbol].to_dict(orient='records')[0]
-        self.contract.__dict__.update(quote)
+        self.contract.update(quote)
 
         # update mark value
         self.mark = (self.contract.bid + self.contract.ask) / 2
         self.net_liquidating_value = self.mark * self.quantity * 100
         self.open_pl = (self.mark - self.trade_price) * self.quantity * 100
-
-        # print("symbol: %s, trade_price: %s, mark: %s, open P/L: %s, nlv: %s" %
-        #       (self.contract.symbol, self.trade_price, self.mark, self.open_pl, self.net_liquidating_value))
 
     def __hash__(self):
         return hash(self.contract.symbol)

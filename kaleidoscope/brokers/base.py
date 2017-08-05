@@ -42,7 +42,6 @@ class BaseBroker(object):
         """
 
         if symbol not in self.data:
-            print('getting option chain data for %s' % symbol)
             try:
                 # we don't have raw option prices for this symbol yet, get it from data source
                 self.data[symbol] = self.datafeed.get(symbol, start, end, exclude_splits, option_type)

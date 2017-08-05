@@ -113,15 +113,17 @@ class Backtest(object):
                     self.broker.stream_next()
                 else:
                     if event is not None:
-                        if event.type == EventType.DATA:
+                        if event.event_type == EventType.DATA:
                             # update strategy instance with current data
                             strategy.on_data_event(event)
-                        elif event.type == EventType.ORDER:
+                        elif event.event_type == EventType.ORDER:
                             # send the order to the broker for processing
                             self.broker.process_order(event)
-                        elif event.type == EventType.FILL:
-                            # notify the strategy tht we have a fill on one of its orders
+                        elif event.event_type == EventType.FILL:
+                            # notify the strategy that we have a fill on one of its orders
                             strategy.on_fill_event(event)
+                        elif event.event_type == EventType.REJECTED:
+                            strategy.on_rejected_event(event)
                         else:
                             raise NotImplementedError("Unsupported event.type '%s'" % event.type)
 

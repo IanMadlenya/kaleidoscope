@@ -39,12 +39,20 @@ class OptionStrategy(object):
         self.mark = None
         self.max_strike_width = None
 
+    def calc_mark(self):
+        """
+        Calculate the mark value of this option strategy based on current prices
+        :return: None
+        """
+        if self.legs is not None:
+            return sum(leg['contract'].mark * leg['quantity'] for leg in self.legs)
+
     def _map(self, strat_sym):
         """
         Takes an array or parsed option spread symbol and create option legs
         as per symbol's arrangement
 
-        :param sym_array: Array containing the components of an option spread's symbol
+        :param strat_sym: Array containing the components of an option spread's symbol
         :return:
         """
 
@@ -68,7 +76,6 @@ class OptionStrategy(object):
                 side = OrderAction.SELL
                 continue
             else:
-                # TODO: use regex to parse quantity, stock/option symbol
                 try:
                     quantity = int(piece)
                     continue
@@ -149,6 +156,7 @@ class OptionStrategy(object):
             self.mark = spread['mark'][0]
 
         self.max_strike_width = self._max_strike_width()
+
         return self
 
     def nearest_delta(self, price):

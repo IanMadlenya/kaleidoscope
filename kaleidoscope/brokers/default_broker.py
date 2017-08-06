@@ -1,7 +1,7 @@
 import collections
 import random
 
-from kaleidoscope.event import FillEvent, RejectedEvent
+from kaleidoscope.event import FillEvent, RejectedEvent, ExpiredEvent
 from kaleidoscope.globals import OrderType, OrderStatus, OrderAction
 from .base import BaseBroker
 
@@ -25,9 +25,26 @@ class DefaultBroker(BaseBroker):
         Check account for any expiring positions, close positions expiring ITM at market value,
         remove position expiring OTM.
 
+        Remove orders with legs that are expired
+
         :return: None
         """
-        self.account.check_expiration(self.current_date)
+        pos_expired = False
+        order_expired = False
+
+        # check account for any expiring positions
+        pos_expired = self.account.check_expiration(self.current_date)
+
+        # check pending orders and remove orders with expiring legs
+        for order in self.order_list:
+            item = self.order_list[order]
+            if item.status == OrderStatus.WORKING and item.expiring(self.current_date):
+                item.status = OrderStatus.EXPIRED
+                order_expired = True
+
+        if pos_expired or order_expired:
+            expired_event = ExpiredEvent(self.current_date)
+            self.queue.put(expired_event)
 
     def _execute(self, order):
         """
@@ -111,7 +128,7 @@ class DefaultBroker(BaseBroker):
         # update the account's position values
         self.account.update(self.quotes)
 
-        # check for expiring positions
+        # check for expiring positions and orders
         self._check_expiration()
 
         # update the broker's working orders' option prices

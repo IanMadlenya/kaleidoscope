@@ -141,6 +141,13 @@ class Strategy(object):
     def on_rejected(self, event):
         pass
 
+    def on_expired_event(self, event):
+
+        self.on_expired(event)
+
+    def on_expired(self, event):
+        pass
+
     def place_order(self, strategy, action, quantity=None,
                     order_tif=OrderTIF.GTC, order_type=OrderType.MKT, limit_price=None):
 

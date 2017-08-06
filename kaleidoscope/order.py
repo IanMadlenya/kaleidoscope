@@ -46,6 +46,17 @@ class Order(object):
         # update the mark value of the order
         self.mark = self.order_strat.calc_mark()
 
+    def expiring(self, date):
+        """
+        Return true if any legs of this order is expiring, else return false
+        :return: Boolean
+        """
+        for leg in self.order_strat.legs:
+            if leg['contract'].get_expiration() == date:
+                return True
+
+        return False
+
     def __str__(self):
         if self.executed_price == 0 and self.limit_price is None:
             price = "MKT"

@@ -47,7 +47,7 @@ class OrderEvent(Event):
 
         super().__init__(EventType.ORDER, date)
         self.order = order
-        # self.print_event()
+        self.print_event()
 
     def print_event(self):
         """
@@ -77,7 +77,7 @@ class FillEvent(Event):
         self.margin = order.margin
         self.commission = order.commissions
 
-        # self.print_event()
+        self.print_event()
 
     def print_event(self):
         print(f"ORDER #{self.order.ticket} FILLED ON {self.date}: {self.order}")
@@ -98,3 +98,18 @@ class RejectedEvent(Event):
 
     def print_event(self):
         print(f"ORDER #{self.order.ticket} REJECTED ON {self.date}: {self.order}")
+
+
+class ExpiredEvent(Event):
+    def __init__(self, date):
+        """
+        A Rejected Event is generated when a newly submitted order does not meet
+        the execution criterion such as not enough buying power or cash.
+
+        :param date: Date of event
+        """
+        super().__init__(EventType.EXPIRED, date)
+        self.print_event()
+
+    def print_event(self):
+        print(f"ORDER OR POSITIONS EXPIRED ON {self.date}")

@@ -34,3 +34,6 @@ class Option(object):
             quote['mark'] = (quote['bid'] + quote['ask']) / 2
 
         self.__dict__.update(quote)
+
+    def get_expiration(self):
+        return self.expiration.date().strftime("%Y-%m-%d")

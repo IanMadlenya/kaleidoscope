@@ -123,6 +123,8 @@ class Backtest(object):
                             strategy.on_fill_event(event)
                         elif event.event_type == EventType.REJECTED:
                             strategy.on_rejected_event(event)
+                        elif event.event_type == EventType.EXPIRED:
+                            strategy.on_expired_event(event)
                         else:
                             raise NotImplementedError("Unsupported event.type '%s'" % event.type)
 

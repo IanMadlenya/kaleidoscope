@@ -25,14 +25,17 @@ class Account(object):
 
         # find non-expired positions
         active = list()
+        expired = False
 
         for p in self.positions:
             if date != p.get_expiration():
                 active.append(p)
             else:
                 self.cash += p.net_liquidating_value
+                expired = True
 
         self.positions = active
+        return expired
 
     def set_cash(self, amt):
         """

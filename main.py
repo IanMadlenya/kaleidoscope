@@ -11,7 +11,7 @@ class SampleStrategy(kd.Strategy):
         self.set_strategy_name("Sample Strategy")
         self.set_cash(10000)
         self.set_start_date(2016, 2, 19)
-        self.set_end_date(2016, 2, 26)
+        self.set_end_date(2016, 12, 31)
 
         # Subscribe to the options data specified from params
         self.add_option(self.symbol)
@@ -37,13 +37,18 @@ class SampleStrategy(kd.Strategy):
         # we sell the spread using a default market order,
         # quantity will be determined automatically by sizer
         # unless quantity is specified
-        self.place_order(contract, action=kd.OrderAction.BUY)
+        self.place_order(contract, action=kd.OrderAction.SELL,
+                         order_type=kd.OrderType.LMT, limit_price=1.5)
 
         # for testing purposes, we send only one order at a time.
         self.tradable = False
 
     def on_fill(self, event):
         # for testing purposes, we allow trading again once an order was filled.
+        self.tradable = True
+
+    def on_expired(self, event):
+        # for testing purposes, we allow trading again once an order was expired.
         self.tradable = True
 
 

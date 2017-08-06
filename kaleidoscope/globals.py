@@ -50,8 +50,8 @@ class Moneyness(Enum):
     ATM = "ATM"
 
 OrderType = Enum("OrderType", "MKT, LMT")
-OrderStatus = Enum("OrderStatus", "WORKING, REJECTED, FILLED, DELETED")
+OrderStatus = Enum("OrderStatus", "WORKING, REJECTED, FILLED, DELETED, EXPIRED")
 OrderTIF = Enum("OrderTIF", "GTC, DAY")
 
-EventType = Enum("EventType", "DATA, ORDER, FILL, REJECTED")
+EventType = Enum("EventType", "DATA, ORDER, FILL, REJECTED, EXPIRED")
 SecType = Enum("SecType", "STK, OPT")

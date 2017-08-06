@@ -1,6 +1,7 @@
 # pylint: disable=E1101
 import re
 from datetime import datetime
+from itertools import groupby
 
 from kaleidoscope.globals import OrderAction
 from kaleidoscope.options.option import Option
@@ -32,7 +33,7 @@ class OptionStrategy(object):
         # attributes to be filled when 'nearest' methods are used
         self.legs = None
         self.symbols = None
-        self.expirations = None
+        self.exps = None
         self.strikes = None
         self.option_types = None
 
@@ -56,6 +57,8 @@ class OptionStrategy(object):
         :return:
         """
 
+        # TODO: Refactor this method
+
         trimmed_sym = strat_sym.replace(".", "")
         parsed = re.findall('\W+|\w+', trimmed_sym)
 
@@ -63,6 +66,7 @@ class OptionStrategy(object):
         symbols = list()
         exps = list()
         strikes = list()
+        option_types = list()
 
         # default mapping for each option symbol
         quantity = 1
@@ -99,14 +103,17 @@ class OptionStrategy(object):
                 if sym_info['strike'] not in strikes:
                     strikes.append(sym_info['strike'])
 
+                option_types.append(sym_info['option_type'])
+
                 strat_legs.append({'contract': option, 'quantity': quantity*side.value})
 
                 quantity = 1
                 side = OrderAction.BUY
 
         self.symbols = symbols
-        self.expirations = exps
+        self.exps = exps
         self.strikes = strikes
+        self.option_types = [t[0] for t in groupby(option_types)]
 
         return strat_legs
 
@@ -183,11 +190,10 @@ class OptionStrategy(object):
             n = self.name.upper()
             s = self.underlying_symbol
 
-            exps = self.expirations
-            p_e = [datetime.strptime(exp, "%Y-%m-%d") for exp in exps]
+            p_e = [datetime.strptime(exp, "%Y-%m-%d") for exp in self.exps]
             e = "".join('%s/' % p.strftime('%d %b %y').upper() for p in p_e)[0: -1]
 
-            sts = self.strikes
-            st = "".join('%s/' % '{0:g}'.format(st) for st in sts)[0: -1]
+            st = "".join('%s/' % '{0:g}'.format(st) for st in self.strikes)[0: -1]
+            t = "".join('%s/' % t.upper() for t in self.option_types)[0: -1]
 
-            return f"{n} {s} {e} {st}"
+            return f"{n} {s} {e} {st} {t}"

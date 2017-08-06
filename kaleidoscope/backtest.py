@@ -3,7 +3,6 @@ import itertools
 import queue
 import time
 
-from kaleidoscope.account import Account
 from kaleidoscope.brokers.default_broker import DefaultBroker
 from kaleidoscope.commissions import default_commissions
 from kaleidoscope.datafeeds.sqlite_data import SQLiteDataFeed
@@ -99,7 +98,7 @@ class Backtest(object):
         for scenario in self.strats:
             # initialize a new instance strategy from the strategy list
             # and an account instance for each scenario
-            self.broker.set_account(Account())
+            self.broker.open_account()
             strategy = scenario[0](self.broker, self.queue,
                                    self.commissions, self.margin, **scenario[1]
                                    )
@@ -126,6 +125,10 @@ class Backtest(object):
                             strategy.on_rejected_event(event)
                         else:
                             raise NotImplementedError("Unsupported event.type '%s'" % event.type)
+
+            # reached the end of simulation, print results
+            print(f"Results for {strategy.name} =======================================================")
+            self.broker.print_results()
 
         program_ends = time.time()
         print("The simulation ran for {0} seconds.".format(round(program_ends - program_starts, 2)))

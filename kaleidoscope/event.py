@@ -1,6 +1,4 @@
-from enum import Enum
-
-EventType = Enum("EventType", "DATA ORDER FILL REJECTED")
+from kaleidoscope.globals import EventType
 
 
 class Event(object):
@@ -49,14 +47,13 @@ class OrderEvent(Event):
 
         super().__init__(EventType.ORDER, date)
         self.order = order
-
-        self.print_event()
+        # self.print_event()
 
     def print_event(self):
         """
         Outputs the values within the OrderEvent.
         """
-        print(f"ORDER #{self.order.ticket} OPENED ON {self.date}: {self.order}")
+        print(f"ORDER OPENED ON {self.date}: {self.order}")
 
 
 class FillEvent(Event):
@@ -80,7 +77,7 @@ class FillEvent(Event):
         self.margin = order.margin
         self.commission = order.commissions
 
-        self.print_event()
+        # self.print_event()
 
     def print_event(self):
         print(f"ORDER #{self.order.ticket} FILLED ON {self.date}: {self.order}")
@@ -97,6 +94,7 @@ class RejectedEvent(Event):
         """
         super().__init__(EventType.REJECTED, date)
         self.order = order
+        # self.print_event()
 
     def print_event(self):
         print(f"ORDER #{self.order.ticket} REJECTED ON {self.date}: {self.order}")

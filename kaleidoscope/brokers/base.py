@@ -1,5 +1,6 @@
 import pandas as pd
 
+from kaleidoscope.account import Account
 from kaleidoscope.options.iterator.option_chain import OptionChainIterator
 
 
@@ -21,8 +22,8 @@ class BaseBroker(object):
         self.continue_backtest = True
         self.current_date = None
 
-    def set_account(self, account):
-        self.account = account
+    def open_account(self):
+        self.account = Account()
 
     def set_account_balance(self, balance):
         self.account.set_cash(balance)
@@ -71,12 +72,12 @@ class BaseBroker(object):
 
         # update the current state for the broker and it's orders
         self.current_date = data_event.date
-        self.update_data(data_event.quotes)
+        self.update(data_event.quotes)
 
         # Send event to queue
         self.queue.put(data_event)
 
-    def update_data(self, event):
+    def update(self, quotes):
         raise NotImplementedError("Subclass update_data method!")
 
     def process_order(self, event):

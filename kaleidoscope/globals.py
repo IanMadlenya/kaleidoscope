@@ -44,7 +44,14 @@ class OptionType(Enum):
     PUT = ('p', -1)
 
 
+class Moneyness(Enum):
+    ITM = "ITM"
+    OTM = "OTM"
+    ATM = "ATM"
+
 OrderType = Enum("OrderType", "MKT, LMT")
-SecType = Enum("SecType", "STK OPT")
 OrderStatus = Enum("OrderStatus", "WORKING, REJECTED, FILLED, DELETED")
 OrderTIF = Enum("OrderTIF", "GTC, DAY")
+
+EventType = Enum("EventType", "DATA, ORDER, FILL, REJECTED")
+SecType = Enum("SecType", "STK, OPT")

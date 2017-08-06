@@ -8,10 +8,10 @@ class SampleStrategy(kd.Strategy):
     """
 
     def on_init(self, **params):
-        print('Strategy initialized with params:', params)
+        self.set_strategy_name("Sample Strategy")
         self.set_cash(10000)
         self.set_start_date(2016, 2, 19)
-        self.set_end_date(2016, 2, 19)
+        self.set_end_date(2016, 2, 26)
 
         # Subscribe to the options data specified from params
         self.add_option(self.symbol)
@@ -37,8 +37,7 @@ class SampleStrategy(kd.Strategy):
         # we sell the spread using a default market order,
         # quantity will be determined automatically by sizer
         # unless quantity is specified
-        self.place_order(contract, action=kd.OrderAction.SELL,
-                         order_type=kd.OrderType.LMT, limit_price=1.2)
+        self.place_order(contract, action=kd.OrderAction.BUY)
 
         # for testing purposes, we send only one order at a time.
         self.tradable = False

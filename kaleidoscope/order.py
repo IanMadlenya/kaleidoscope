@@ -2,13 +2,13 @@ from kaleidoscope.options.option_strategy import OptionStrategy
 
 
 class Order(object):
-    def __init__(self, ticket, date, order_strat, action,
+    def __init__(self, date, order_strat, action,
                  quantity, order_type, tif, limit_price,
                  commission, margin
                  ):
 
         # Order ticket, to be created by broker
-        self.ticket = ticket
+        self.ticket = None
 
         if isinstance(order_strat, OptionStrategy):
             self.underlying_symbol = order_strat.underlying_symbol

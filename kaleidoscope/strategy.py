@@ -30,11 +30,15 @@ class Strategy(object):
             self.sizer = fixed_quantity_sizer
 
         self.tradable = True
+        self.name = "Custom Strategy"
 
         self._init(**params)
 
     def positions_total(self):
         return self.broker.positions_total()
+
+    def set_strategy_name(self, name):
+        self.name = name
 
     def set_cash(self, amt):
         """
@@ -92,6 +96,7 @@ class Strategy(object):
         self.__dict__.update(params)
 
         self.on_init(**params)
+        print(f"{self.name} Initialized with the following parameters:", params)
 
     def on_init(self, **params):
         raise NotImplementedError
@@ -160,9 +165,7 @@ class Strategy(object):
             if quantity is None:
                 quantity = self.sizer(strategy, action)
 
-            ticket = self.broker.generate_ticket()
-
-            order = Order(ticket, self.current_date, strategy, action,
+            order = Order(self.current_date, strategy, action,
                           quantity, order_type, order_tif, limit_price,
                           self.commission, self.margin)
 

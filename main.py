@@ -11,7 +11,7 @@ class SampleStrategy(kd.Strategy):
         self.set_strategy_name("Sample Strategy")
         self.set_cash(10000)
         self.set_start_date(2016, 2, 19)
-        self.set_end_date(2016, 12, 31)
+        self.set_end_date(2016, 2, 26)
 
         # Subscribe to the options data specified from params
         self.add_option(self.symbol)
@@ -24,21 +24,11 @@ class SampleStrategy(kd.Strategy):
         :return: None
         """
 
-        # create vertical spreads with today's quotes
-        call_spreads = kd.OptionStrategies.vertical(data,
-                                                    option_type=kd.OptionType.CALL,
-                                                    width=self.width,
-                                                    DTE=self.DTE
-                                                    )
+        # query for vertical spreads that can be build with current day's quotes
+        vertical_spread = data.verticals(self.width, kd.OptionType.PUT, self.DTE).nearest('mark', self.price)
 
-        # filter the strikes to trade by looking at the spread's mark value
-        contract = call_spreads.nearest_mark(self.price)
-
-        # we sell the spread using a default market order,
-        # quantity will be determined automatically by sizer
-        # unless quantity is specified
-        self.place_order(contract, action=kd.OrderAction.SELL,
-                         order_type=kd.OrderType.LMT, limit_price=1.5)
+        # quantity will be determined automatically by sizer unless quantity is specified
+        self.place_order(vertical_spread, action=kd.OrderAction.SELL)
 
         # for testing purposes, we send only one order at a time.
         self.tradable = False

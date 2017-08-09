@@ -2,6 +2,7 @@ import datetime
 
 from kaleidoscope.event import OrderEvent
 from kaleidoscope.globals import OrderAction, OrderType, OrderTIF
+from kaleidoscope.options.option_query import OptionQuery
 from kaleidoscope.options.option_strategy import OptionStrategy
 from kaleidoscope.order import Order
 from kaleidoscope.sizers import fixed_quantity_sizer
@@ -15,8 +16,12 @@ class Strategy(object):
     """
 
     def __init__(self, broker, queue, comm_func, margin_func, **params):
+
         self.broker = broker
+
         self.current_date = None
+        self.current_quotes = None
+
         self.commission = comm_func
         self.margin = margin_func
 
@@ -109,7 +114,11 @@ class Strategy(object):
         :param event: Data event passed from backtester
         :return: None
         """
+        # store the event components in instance variables
         self.current_date = event.date
+        self.current_quotes = event.quotes.fetch()
+
+        # send a copy of the quotes to custom strategy
         self.on_data(event.quotes)
 
     def on_data(self, data):
@@ -150,7 +159,6 @@ class Strategy(object):
 
     def place_order(self, strategy, action, quantity=None,
                     order_tif=OrderTIF.GTC, order_type=OrderType.MKT, limit_price=None):
-
         """
         Create a buy signal event and place it in the queue
 
@@ -162,17 +170,24 @@ class Strategy(object):
         :param quantity: The amount to transaction, > 0 for buy < 0 for sell
         :return: None
         """
-        if not isinstance(strategy, OptionStrategy):
-            raise ValueError("Strategy param must be of type OptionStrategy")
+        if not isinstance(strategy, OptionQuery):
+            raise ValueError("Strategy param must be of type OptionQuery")
         elif not isinstance(action, OrderAction):
             raise ValueError("Action must be of type OrderAction")
 
         if self.tradable:
+
+            if strategy.fetch().shape[0] != 1:
+                raise ValueError("Strategy param must contain one strategy")
+
+            # Initialize an option strategy object from the symbol
+            trade_strategy = OptionStrategy(strategy, self.current_quotes)
+
             # use sizer to determine quantity
             if quantity is None:
-                quantity = self.sizer(strategy, action)
+                quantity = self.sizer(trade_strategy, action)
 
-            order = Order(self.current_date, strategy, action,
+            order = Order(self.current_date, trade_strategy, action,
                           quantity, order_type, order_tif, limit_price,
                           self.commission, self.margin)
 

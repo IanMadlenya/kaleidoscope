@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from kaleidoscope.position import Position
 
 
@@ -13,6 +15,7 @@ class Account(object):
 
         self.comm_agg = 0
         self.positions = list()
+        self.pos_dict = {}
 
     def check_expiration(self, date):
         """
@@ -59,7 +62,7 @@ class Account(object):
         # for each order leg, add the position into the position list
         # if symbols duplicate, merge the quantities together.
         for leg in order.order_strat.legs:
-            position = Position(leg['contract'], leg['quantity'] * order.quantity)
+            position = Position(leg['contract'], leg['quantity'] * order.quantity, order.ticket)
             if position not in self.positions:
                 # this position does not exist yet, add it
                 self.positions.append(position)
@@ -86,6 +89,7 @@ class Account(object):
 
         # update account's net liquidating value
         self.net_liquidating_value = self.calc_net_liquidating_value()
+        self.calc_option_buying_power()
 
     def calc_net_liquidating_value(self):
         """
@@ -96,3 +100,10 @@ class Account(object):
         """
 
         return self.cash + sum(p.net_liquidating_value for p in self.positions)
+
+    def calc_option_buying_power(self):
+
+        pos_by_ticket = defaultdict(list)
+        for p in self.positions: pos_by_ticket[p.ticket].append(p)
+
+        print(pos_by_ticket)

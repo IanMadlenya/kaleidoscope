@@ -5,7 +5,6 @@ from itertools import groupby
 
 from kaleidoscope.globals import OrderAction
 from kaleidoscope.options.option import Option
-from kaleidoscope.options.option_query import OptionQuery
 
 
 class OptionStrategy(object):
@@ -15,7 +14,7 @@ class OptionStrategy(object):
     that matches the method requirements.
     """
 
-    def __init__(self, chains, original_chains, name=None):
+    def __init__(self, strategy, quotes):
         """
         This class holds an instance of an option strategy and it's
         components and provides methods to manipulate the option legs
@@ -23,22 +22,23 @@ class OptionStrategy(object):
 
         :params: chains: Dataframe containing shifted columns representing an option leg
         """
-        self.chains = chains
-        self._chains = original_chains.drop('strike_key', axis=1)
-        self.name = name
 
-        if self.chains is not None:
-            self.underlying_symbol = chains['underlying_symbol'][0]
+        self.quotes = quotes
+        self.symbol = strategy.fetch().get_value(0, 0, takeable=True)
+        self.name = strategy.fetch().get_value(0, 1, takeable=True)
+        self.underlying_symbol = strategy.fetch().get_value(0, 2, takeable=True)
 
-        # attributes to be filled when 'nearest' methods are used
-        self.legs = None
+        # attributes to be filled by _map
+
         self.symbols = None
         self.exps = None
         self.strikes = None
         self.option_types = None
 
-        self.mark = None
         self.max_strike_width = None
+
+        self.legs = self._map(self.symbol)
+        self.mark = self.calc_mark()
 
     def calc_mark(self):
         """
@@ -88,7 +88,7 @@ class OptionStrategy(object):
 
             if len(piece) >= 18:
                 # this is an option symbol, get option info
-                sym_info = self._chains[self._chains['symbol'] == piece].to_dict(orient='records')[0]
+                sym_info = self.quotes[self.quotes['symbol'] == piece].to_dict(orient='records')[0]
                 # convert pandas datetime
                 expiration = sym_info['expiration'].date().strftime("%Y-%m-%d")
 
@@ -114,6 +114,7 @@ class OptionStrategy(object):
         self.exps = exps
         self.strikes = strikes
         self.option_types = [t[0] for t in groupby(option_types)]
+        self.max_strike_width = self._max_strike_width()
 
         return strat_legs
 
@@ -136,64 +137,14 @@ class OptionStrategy(object):
         else:
             raise ValueError("invalid amounts of strikes in option strategy")
 
-    def nearest_mark(self, mark, tie='roundup'):
-        """
-        Returns the object itself with the legs attribute containing the option legs
-        that matches the mark value and 'expiration', 'strikes' and 'symbol' attributes
-        assigned.
-
-        :param mark: Mark value to match option spread with
-        :param tie: how to handle multiple matches for mark value
-        :return: Self
-        """
-        spread = OptionQuery(self.chains).closest('mark', mark).fetch()
-
-        if len(spread) != 1:
-            max_mark_idx = spread['mark'].idxmax()
-            min_mark_idx = spread['mark'].idxmin()
-
-            if tie == 'roundup':
-                self.legs = self._map(spread['symbol'][max_mark_idx])
-                self.mark = spread['mark'][max_mark_idx]
-            else:
-                self.legs = self._map(spread['symbol'][min_mark_idx])
-                self.mark = spread['mark'][min_mark_idx]
-        else:
-            self.legs = self._map(spread['symbol'][0])
-            self.mark = spread['mark'][0]
-
-        self.max_strike_width = self._max_strike_width()
-
-        return self
-
-    def nearest_delta(self, price):
-        """
-
-        :param price:
-        :return:
-        """
-        pass
-
-    def filter(self, func, **params):
-        """
-
-        :param func:
-        :param params:
-        :return:
-        """
-        pass
-
     def __str__(self):
-        if self.legs is None:
-            return f"{self.name}s"
-        else:
-            n = self.name.upper()
-            s = self.underlying_symbol
+        n = self.name.upper()
+        s = self.underlying_symbol
 
-            p_e = [datetime.strptime(exp, "%Y-%m-%d") for exp in self.exps]
-            e = "".join('%s/' % p.strftime('%d %b %y').upper() for p in p_e)[0: -1]
+        p_e = [datetime.strptime(exp, "%Y-%m-%d") for exp in self.exps]
+        e = "".join('%s/' % p.strftime('%d %b %y').upper() for p in p_e)[0: -1]
 
-            st = "".join('%s/' % '{0:g}'.format(st) for st in self.strikes)[0: -1]
-            t = "".join('%s/' % t.upper() for t in self.option_types)[0: -1]
+        st = "".join('%s/' % '{0:g}'.format(st) for st in self.strikes)[0: -1]
+        t = "".join('%s/' % t.upper() for t in self.option_types)[0: -1]
 
-            return f"{n} {s} {e} {st} {t}"
+        return f"{n} {s} {e} {st} {t}"

@@ -8,6 +8,7 @@ import operator
 import pandas as pd
 
 from kaleidoscope.globals import Period, OptionType
+from kaleidoscope.options.option_strategy import OptionStrategy
 
 
 class OptionQuery(object):
@@ -64,13 +65,13 @@ class OptionQuery(object):
         else:
             raise ValueError("option_type must be of type OptionType")
 
-    def closest(self, column, val):
+    def nearest(self, column, val, tie='roundup'):
         """
-        Returns a dataframe row containing the column item closest to the
+        Returns a dataframe row containing the column item nearest to the
         given value.
 
         :param column: column to look up value
-        :param val: return values closest to this param
+        :param val: return values nearest to this param
         :return: A new OptionQuery object with filtered dataframe
 
         """
@@ -82,6 +83,12 @@ class OptionQuery(object):
         filtered_df = self._compare('abs_dist', operator.eq, min_abs_dist)
         filtered_df = filtered_df.drop(['abs_dist'], axis=1)
 
+        if len(filtered_df) != 1:
+            if tie == 'roundup':
+                filtered_df = filtered_df[filtered_df[column] == filtered_df[column].max()]
+            elif tie == 'rounddown':
+                filtered_df = filtered_df[filtered_df[column] == filtered_df[column].min()]
+
         return OptionQuery(filtered_df)
 
     def offset(self, column, offset_from, offset, mode='pct'):
@@ -90,7 +97,7 @@ class OptionQuery(object):
         to the value provided to this function
         """
         offset = self._offset(offset_from, offset, mode)
-        return self.closest(column, offset)
+        return self.nearest(column, offset)
 
     def lte(self, column, val):
         """
@@ -276,10 +283,64 @@ class OptionQuery(object):
 
         return offset
 
-    # FETCH METHODS =================================================================================
+    # OUTPUT METHODS =================================================================================
 
     def fetch(self):
         """
         Return all rows of this object's option chain
         """
         return self._strip()
+
+    def to_strat(self):
+        """
+        Return an OptionStrategy object created from the filtered option chains
+        :return: OptionStrategy
+        """
+        if self.option_chain.shape[0] > 1:
+            raise ValueError("Option chains cannot be more than one row")
+        else:
+            return OptionStrategy(self.option_chain)
+
+    # OPTION STRATEGY METHODS ========================================================================
+
+    def verticals(self, width, option_type, dte=None):
+        """
+        The vertical spread is an option spread strategy whereby the
+        option trader purchases a certain number of options and simultaneously
+        sell an equal number of options of the same class, same underlying security,
+        same expiration date, but at a different strike price.
+
+        :param width: Distance in value between the strikes to construct vertical spreads with.
+        :param option_type: The option type for this spread
+        :param dte: Date to expiration
+        :return: A new dataframe containing all vertical spreads created from dataframe
+        """
+
+        if width <= 0:
+            raise ValueError("Width of vertical spreads cannot be less than or equal 0")
+
+        chains = self.option_type(option_type)
+        chains = chains.lte('expiration', dte).fetch() if dte is not None else chains.fetch()
+
+        # shift only the strikes since this is a vertical spread
+        chains['strike_key'] = chains['strike'] + (width * option_type.value[1])
+        left_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike_key']
+        right_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike']
+
+        chains = chains.merge(chains, left_on=left_keys, right_on=right_keys, suffixes=('', '_shifted'))
+
+        chains['strategy'] = 'Vertical'
+        chains['symbol'] = '.' + chains['symbol'] + '-.' + chains['symbol_shifted']
+        chains['mark'] = ((chains['bid'] - chains['ask_shifted']) + (chains['ask'] - chains['bid_shifted'])) / 2
+        chains['volume'] = chains['trade_volume'] + chains['trade_volume_shifted']
+        chains = chains.rename(index=str, columns={"strike": "long_strike", "strike_shifted": "short_strike"})
+
+        cols = ['symbol', 'strategy', 'underlying_symbol', 'quote_date', 'expiration',
+                'volume', 'mark', 'long_strike', 'short_strike']
+
+        for greek in ['delta', 'theta', 'gamma', 'vega', 'rho']:
+            if greek in chains.columns:
+                chains[greek] = chains[greek] - chains[greek + "_shifted"]
+                cols.append(greek)
+
+        return OptionQuery(chains[cols])

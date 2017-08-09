@@ -47,7 +47,7 @@ class OrderEvent(Event):
 
         super().__init__(EventType.ORDER, date)
         self.order = order
-        self.print_event()
+        # self.print_event()
 
     def print_event(self):
         """
@@ -94,10 +94,10 @@ class RejectedEvent(Event):
         """
         super().__init__(EventType.REJECTED, date)
         self.order = order
-        # self.print_event()
+        self.print_event()
 
     def print_event(self):
-        print(f"ORDER #{self.order.ticket} REJECTED ON {self.date}: {self.order}")
+        print(f"ORDER REJECTED ON {self.date}: {self.order}")
 
 
 class ExpiredEvent(Event):

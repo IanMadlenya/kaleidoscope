@@ -14,12 +14,6 @@ class DefaultBroker(BaseBroker):
 
         super().__init__(datafeed, commissions, margin, queue)
 
-    def positions_total(self):
-        return len(self.account.positions)
-
-    def working_total(self):
-        return sum(1 for order in self.order_list if self.order_list[order].status == OrderStatus.WORKING)
-
     def _check_expiration(self):
         """
         Check account for any expiring positions, close positions expiring ITM at market value,
@@ -29,7 +23,7 @@ class DefaultBroker(BaseBroker):
 
         :return: None
         """
-        pos_expired = False
+
         order_expired = False
 
         # check account for any expiring positions
@@ -138,7 +132,7 @@ class DefaultBroker(BaseBroker):
                 order.update(self.quotes)
                 self.execute_order(order)
 
-                # self.status()
+        self.status()
 
     def generate_ticket(self):
         """
@@ -162,7 +156,8 @@ class DefaultBroker(BaseBroker):
         cash = self.account.cash
         buying_power = self.account.option_buying_power
 
-        print(f"Cash: {cash:0.2f}, Net Liquidating Value: {net_liq_val:0.2f},"
+        print(f"Date: {self.current_date}, "
+              f"Cash: {cash:0.2f}, Net Liquidating Value: {net_liq_val:0.2f},"
               f" Option Buying Power: {buying_power:0.2f}"
               f" Working Orders: {working_orders}, Open Positions: {open_positions}"
               )

@@ -3,7 +3,7 @@ from kaleidoscope.options.option import Option
 
 
 class Position(object):
-    def __init__(self, contract, quantity):
+    def __init__(self, contract, quantity, ticket):
         """
         Set up the initial "account" of the Position to be
         zero for most items, with the exception of the initial
@@ -15,6 +15,7 @@ class Position(object):
 
         self.quantity = quantity
         self.contract = contract
+        self.ticket = ticket
 
         if isinstance(self.contract, Option):
             self.expiration = self.contract.expiration
@@ -89,3 +90,6 @@ class Position(object):
         if isinstance(other, Position) and self == other:
             self.quantity += other.quantity
             return self
+
+    def __repr__(self):
+        return "Symbol: %s, Quantity: %s" % (self.contract.symbol, self.quantity)

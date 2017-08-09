@@ -4,7 +4,7 @@ def fixed_quantity_sizer(strategy, action, quantity=10):
 
 def dollar_amount_sizer(strategy, action, amount=1000):
     """
-    Return the quantity amount for the strategy that is valued closest
+    Return the quantity amount for the strategy that is valued nearest
     to the amount value requested.
 
     :param strategy:

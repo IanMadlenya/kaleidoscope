@@ -11,7 +11,6 @@ class Order(object):
         self.ticket = None
 
         if isinstance(order_strat, OptionStrategy):
-            self.underlying_symbol = order_strat.underlying_symbol
             self.name = order_strat.__str__()
 
         self.order_strat = order_strat

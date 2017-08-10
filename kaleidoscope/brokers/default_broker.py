@@ -1,44 +1,12 @@
-import collections
-import random
-
-from kaleidoscope.event import FillEvent, RejectedEvent, ExpiredEvent
+from kaleidoscope.event import FillEvent, RejectedEvent
 from kaleidoscope.globals import OrderType, OrderStatus, OrderAction
+from kaleidoscope.order import Order
 from .base import BaseBroker
 
 
 class DefaultBroker(BaseBroker):
-    def __init__(self, datafeed, commissions, margin, queue):
-
-        self.order_list = collections.OrderedDict()
-        self.quotes = None
-
-        super().__init__(datafeed, commissions, margin, queue)
-
-    def _check_expiration(self):
-        """
-        Check account for any expiring positions, close positions expiring ITM at market value,
-        remove position expiring OTM.
-
-        Remove orders with legs that are expired
-
-        :return: None
-        """
-
-        order_expired = False
-
-        # check account for any expiring positions
-        pos_expired = self.account.check_expiration(self.current_date)
-
-        # check pending orders and remove orders with expiring legs
-        for order in self.order_list:
-            item = self.order_list[order]
-            if item.status == OrderStatus.WORKING and item.expiring(self.current_date):
-                item.status = OrderStatus.EXPIRED
-                order_expired = True
-
-        if pos_expired or order_expired:
-            expired_event = ExpiredEvent(self.current_date)
-            self.queue.put(expired_event)
+    def __init__(self, datafeed, comm_model, margin_model, queue):
+        super().__init__(datafeed, comm_model, margin_model, queue)
 
     def _execute(self, order):
         """
@@ -64,6 +32,7 @@ class DefaultBroker(BaseBroker):
         :param order: The order to test the executable conditions for
         :return: Boolean
         """
+
         return ((self.account.cash - order.total_cost > 0) and
                 (self.account.option_buying_power - order.margin) > 0)
 
@@ -72,20 +41,30 @@ class DefaultBroker(BaseBroker):
         Process a new order received from an order event.
         """
 
-        if self._executable(event.order):
+        # create an order object to keep track of it
+        order = Order(event.date, event.strategy, event.action,
+                      event.quantity, event.order_type,
+                      event.order_tif, event.limit_price)
 
+        # calculate the order's commissions
+        order.commissions = self.comm_model.get_commissions(order.strategy)
+
+        # calculate the order's margin
+        order.margin = self.margin_model.get_init_margin(order.strategy, order.action)
+
+        # test if order execution is possible
+        if self._executable(order):
             # create a ticket for this order
-            event.order.ticket = self.generate_ticket()
+            order.ticket = self.generate_ticket()
 
-            # reduce buying power as the order is accepted
-            self.account.option_buying_power -= event.order.margin
-            self.execute_order(event.order)
+            # execute this order if possible
+            self.execute_order(order)
 
             # add the order to the order list to keep track
-            self.order_list[event.order.ticket] = event.order
+            self.order_list[order.ticket] = order
         else:
-            event.order.status = OrderStatus.REJECTED
-            evt = RejectedEvent(self.current_date, event.order)
+            order.status = OrderStatus.REJECTED
+            evt = RejectedEvent(self.current_date, order)
             self.queue.put(evt)
 
     def execute_order(self, order):
@@ -110,68 +89,5 @@ class DefaultBroker(BaseBroker):
                 # if market conditions meet limit requirements execute it
                 self._execute(order)
 
-    def update(self, quotes):
-        """
-        Using fresh quotes from data source, update current values
-        for pending orders and positions held in accounts.
 
-        :param quotes: fresh quotes in DataFrame format
-        """
-        self.quotes = quotes.fetch()
 
-        # update the account's position values
-        self.account.update(self.quotes)
-
-        # check for expiring positions and orders
-        self._check_expiration()
-
-        # update the broker's working orders' option prices
-        for order_item in self.order_list:
-            order = self.order_list[order_item]
-            if order.status == OrderStatus.WORKING:
-                order.update(self.quotes)
-                self.execute_order(order)
-
-        self.status()
-
-    def generate_ticket(self):
-        """
-        Returns a ticket number based on the current orders already
-        processed by the broker.
-
-        """
-        return random.randint(100000, 999999)
-
-    def status(self):
-        """
-        Print information about the broker and its account's current state
-        :return: None
-        """
-
-        working_orders = sum(1 for o in self.order_list
-                             if self.order_list[o].status == OrderStatus.WORKING)
-        open_positions = sum(1 for p in self.account.positions)
-
-        net_liq_val = self.account.net_liquidating_value
-        cash = self.account.cash
-        buying_power = self.account.option_buying_power
-
-        print(f"Date: {self.current_date}, "
-              f"Cash: {cash:0.2f}, Net Liquidating Value: {net_liq_val:0.2f},"
-              f" Option Buying Power: {buying_power:0.2f}"
-              f" Working Orders: {working_orders}, Open Positions: {open_positions}"
-              )
-
-    def print_results(self):
-        """
-        Print information displayed when simulation ends
-        :return: None
-        """
-
-        net_liq_val = self.account.net_liquidating_value
-        cash = self.account.cash
-        buying_power = self.account.option_buying_power
-
-        print(f"Equity: {cash:0.2f},"
-              f" Total P/L: {net_liq_val-self.account.initial_cash:0.2f}\n"
-              )

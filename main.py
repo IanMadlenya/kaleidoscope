@@ -25,10 +25,11 @@ class SampleStrategy(kd.Strategy):
         """
 
         # query for vertical spreads that can be build with current day's quotes
-        vertical_spread = data.verticals(self.width, kd.OptionType.PUT, self.DTE).nearest('mark', self.price)
+        vertical_spread = (data.verticals(self.width, kd.OptionType.CALL, self.DTE)
+                           .nearest('mark', self.price))
 
         # quantity will be determined automatically by sizer unless quantity is specified
-        self.place_order(vertical_spread, action=kd.OrderAction.SELL)
+        self.place_order(vertical_spread, action=kd.OrderAction.STO)
 
         # for testing purposes, we send only one order at a time.
         self.tradable = False

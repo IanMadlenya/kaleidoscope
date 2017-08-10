@@ -35,8 +35,8 @@ class DataEvent(Event):
 
 
 class OrderEvent(Event):
-
-    def __init__(self, date, order):
+    def __init__(self, date, strategy, action,
+                 quantity, order_type, order_tif, limit_price):
         """
         An Order Event is created by the strategy class to hold an order request
         to be executed by the broker.
@@ -46,14 +46,26 @@ class OrderEvent(Event):
         """
 
         super().__init__(EventType.ORDER, date)
-        self.order = order
-        # self.print_event()
+        self.strategy = strategy
+        self.action = action
+        self.quantity = quantity
+        self.order_type = order_type
+        self.order_tif = order_tif
+        self.limit_price = limit_price
+
+        self.print_event()
 
     def print_event(self):
         """
         Outputs the values within the OrderEvent.
         """
-        print(f"ORDER OPENED ON {self.date}: {self.order}")
+
+        if self.limit_price is None:
+            price = "MKT"
+        else:
+            price = '@%s' % '{:.2f}'.format(self.limit_price)
+
+        print(f"ORDER OPENED ON {self.date}: {self.quantity} {self.action.name} {price} {self.strategy}")
 
 
 class FillEvent(Event):

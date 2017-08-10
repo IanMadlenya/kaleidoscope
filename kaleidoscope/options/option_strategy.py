@@ -29,7 +29,6 @@ class OptionStrategy(object):
         self.underlying_symbol = strategy.fetch().get_value(0, 2, takeable=True)
 
         # attributes to be filled by _map
-
         self.symbols = None
         self.exps = None
         self.strikes = None
@@ -70,14 +69,14 @@ class OptionStrategy(object):
 
         # default mapping for each option symbol
         quantity = 1
-        side = OrderAction.BUY
+        side = OrderAction.BTO
 
         for piece in parsed:
             if piece == "+":
-                side = OrderAction.BUY
+                side = OrderAction.BTO
                 continue
             elif piece == "-":
-                side = OrderAction.SELL
+                side = OrderAction.STO
                 continue
             else:
                 try:
@@ -108,7 +107,7 @@ class OptionStrategy(object):
                 strat_legs.append({'contract': option, 'quantity': quantity*side.value})
 
                 quantity = 1
-                side = OrderAction.BUY
+                side = OrderAction.BTO
 
         self.symbols = symbols
         self.exps = exps

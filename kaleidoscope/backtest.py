@@ -3,17 +3,17 @@ import itertools
 import queue
 import time
 
+from kaleidoscope.brokers.comm_model import ThinkOrSwimCommModel
 from kaleidoscope.brokers.default_broker import DefaultBroker
-from kaleidoscope.commissions import default_commissions
+from kaleidoscope.brokers.margin_model import ThinkOrSwimMarginModel
 from kaleidoscope.datafeeds.sqlite_data import SQLiteDataFeed
 from kaleidoscope.event import EventType
-from kaleidoscope.margin import tos_margin
 
 
 class Backtest(object):
     def __init__(self, broker=DefaultBroker,
-                 commissions=default_commissions,
-                 margin=tos_margin,
+                 comm_model=ThinkOrSwimCommModel,
+                 margin_model=ThinkOrSwimMarginModel,
                  data=SQLiteDataFeed,
                  data_path=None
                  ):
@@ -25,9 +25,7 @@ class Backtest(object):
 
         # initialize backtest configuration
         self.datafeed = data(data_path)
-        self.commissions = commissions
-        self.margin = margin
-        self.broker = broker(self.datafeed, self.commissions, self.margin, self.queue)
+        self.broker = broker(self.datafeed, comm_model(), margin_model(), self.queue)
 
     def add_strategy(self, strategy, **kwargs):
         """
@@ -99,9 +97,7 @@ class Backtest(object):
             # initialize a new instance strategy from the strategy list
             # and an account instance for each scenario
             self.broker.open_account()
-            strategy = scenario[0](self.broker, self.queue,
-                                   self.commissions, self.margin, **scenario[1]
-                                   )
+            strategy = scenario[0](self.broker, self.queue, **scenario[1])
             self.broker.continue_backtest = True
 
             while self.broker.continue_backtest:

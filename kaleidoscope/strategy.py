@@ -4,7 +4,6 @@ from kaleidoscope.event import OrderEvent
 from kaleidoscope.globals import OrderAction, OrderType, OrderTIF
 from kaleidoscope.options.option_query import OptionQuery
 from kaleidoscope.options.option_strategy import OptionStrategy
-from kaleidoscope.order import Order
 from kaleidoscope.sizers import fixed_quantity_sizer
 
 
@@ -15,15 +14,12 @@ class Strategy(object):
     based on option greeks and prices.
     """
 
-    def __init__(self, broker, queue, comm_func, margin_func, **params):
+    def __init__(self, broker, queue, **params):
 
         self.broker = broker
 
         self.current_date = None
         self.current_quotes = None
-
-        self.commission = comm_func
-        self.margin = margin_func
 
         self.queue = queue
         self.order_list = list()
@@ -181,18 +177,16 @@ class Strategy(object):
                 raise ValueError("Strategy param must contain one strategy")
 
             # Initialize an option strategy object from the symbol
-            trade_strategy = OptionStrategy(strategy, self.current_quotes)
+            option_strategy = OptionStrategy(strategy, self.current_quotes)
 
             # use sizer to determine quantity
             if quantity is None:
-                quantity = self.sizer(trade_strategy, action)
+                quantity = self.sizer(option_strategy, action)
 
-            order = Order(self.current_date, trade_strategy, action,
-                          quantity, order_type, order_tif, limit_price,
-                          self.commission, self.margin)
+            # create an new order event and place it in the queue
+            event = OrderEvent(self.current_date, option_strategy, action,
+                               quantity, order_type, order_tif, limit_price)
 
-            # create an new order and place it in the queue
-            event = OrderEvent(self.current_date, order)
             self.queue.put(event)
 
         return

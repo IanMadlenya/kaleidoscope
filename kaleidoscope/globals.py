@@ -36,8 +36,10 @@ class Period(Enum):
 
 
 class OrderAction(Enum):
-    BUY = 1
-    SELL = -1
+    BTO = 1
+    STO = -1
+    BTC = -1
+    STC = 1
 
 class OptionType(Enum):
     CALL = ('c', 1)
